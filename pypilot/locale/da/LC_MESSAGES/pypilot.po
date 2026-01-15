@@ -1,0 +1,967 @@
+# Translations template for pypilot.
+# Copyright (C) 2021 ORGANIZATION
+# This file is distributed under the same license as the pypilot project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2021.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: pypilot 0.24\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-04-06 17:25-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Generated-By: Babel 2.6.0\n"
+
+#: ../rudder.py:118
+msgid "bad rudder calibration"
+msgstr "dårlig rorkalibrering"
+
+#: ../rudder.py:122
+msgid "bad servo rudder calibration"
+msgstr "dårlig servoror kalibrering"
+
+#: ../rudder.py:193
+msgid "servo rudder autogain failed"
+msgstr "servoror autogain mislykkedes"
+
+#: ../failedimports.py:12
+msgid ""
+"pypilot failed to import required modules.  Did you forget to run sudo "
+"python3 setup.py install?"
+msgstr ""
+"pypilot kunne ikke importere krævede moduler. Glemte du at køre sudo python3"
+" setup.py installation?"
+
+#: ../pyjson.py:14
+msgid "WARNING: python ujson library failed, parsing will consume more cpu"
+msgstr ""
+"ADVARSEL: python ujson-biblioteket mislykkedes, parsing bruger mere CPU"
+
+#: ../servo.py:453
+msgid "servo calibration invalid"
+msgstr "servokalibrering ugyldig"
+
+#: ../servo.py:588
+msgid "failed to open servo on:"
+msgstr "kunne ikke åbne servo på:"
+
+#: ../servo.py:595
+msgid "failed set nonblocking/exclusive"
+msgstr "mislykkedes sæt ikke-blokering / eksklusiv"
+
+#: ../servo.py:626 ../signalk.py:189
+msgid "found"
+msgstr "fundet"
+
+#: ../servo.py:743
+msgid "loading servo calibration"
+msgstr "indlæsning af servokalibrering"
+
+#: ../servo.py:747
+msgid "WARNING: using default servo calibration!!"
+msgstr "ADVARSEL: Brug af standard servokalibrering !!"
+
+#: ../servo.py:756
+msgid "probing"
+msgstr "sondering"
+
+#: ../servo.py:772
+msgid "arduino servo detected"
+msgstr "arduino servo opdaget"
+
+#: ../servo.py:781
+msgid "device needed for option"
+msgstr "enhed, der er nødvendig til valgmulighed"
+
+#: ../nmea.py:109
+msgid "nmea failed to parse gps"
+msgstr "nmea kunne ikke analysere GPS"
+
+#: ../nmea.py:149
+msgid "nmea failed to parse wind"
+msgstr "nmea kunne ikke analysere vind"
+
+#: ../nmea.py:211
+msgid "exception parsing apb"
+msgstr "undtagelse parsing apb"
+
+#: ../nmea.py:253 ../nmea.py:263
+msgid "exception parsing vhw"
+msgstr "undtagelse parsing vhw"
+
+#: ../nmea.py:352
+msgid "unhandled nmea pipe string"
+msgstr "uhåndteret nmea rørstreng"
+
+#: ../nmea.py:405
+msgid "lost serial"
+msgstr "mistet serie"
+
+#: ../nmea.py:428
+msgid "nmea got flag for process pipe:"
+msgstr "nmea fik flag til procesrør:"
+
+#: ../nmea.py:450
+msgid "is another process accessing it?"
+msgstr "har en anden proces adgang til det?"
+
+#: ../nmea.py:452
+msgid "serial device timed out"
+msgstr "seriel enhed blev udløbet"
+
+#: ../nmea.py:521
+msgid "failed to open"
+msgstr "kunne ikke åbnes"
+
+#: ../nmea.py:587
+msgid "nmea server on port"
+msgstr "nmea-server på port"
+
+#: ../nmea.py:587
+msgid "bind failed."
+msgstr "bind mislykkedes."
+
+#: ../nmea.py:589
+msgid "listening on port"
+msgstr "lytter til havn"
+
+#: ../nmea.py:589
+msgid "for nmea connections"
+msgstr "til nmea-forbindelser"
+
+#: ../nmea.py:660
+msgid "nmea server has too many connections"
+msgstr "nmea server har for mange forbindelser"
+
+#: ../nmea.py:686
+msgid "nmea client lost connection"
+msgstr "nmea -klient mistede forbindelsen"
+
+#: ../nmea.py:691
+msgid "nmea sock not in sockets!"
+msgstr "nmea sok ikke i stikkontakter!"
+
+#: ../nmea.py:702
+msgid "nmea failed to unregister socket"
+msgstr "nmea kunne ikke afmelde stikket"
+
+#: ../nmea.py:707
+msgid "nmea failed to remove fd"
+msgstr "nmea kunne ikke fjerne fd"
+
+#: ../nmea.py:712
+msgid "nmea failed to remove address"
+msgstr "nmea kunne ikke fjerne adressen"
+
+#: ../nmea.py:737
+msgid "invalid value"
+msgstr "ugyldig værdi"
+
+#: ../nmea.py:747
+msgid "connect error"
+msgstr "forbindelsesfejl"
+
+#: ../nmea.py:776 ../signalk.py:269
+msgid "failed to connect"
+msgstr "forbindelsen fejlede"
+
+#: ../nmea.py:784
+msgid "nmea client connected"
+msgstr "nmea -klient tilsluttet"
+
+#: ../nmea.py:813
+msgid "poll took too long in nmea process!"
+msgstr "afstemningen tog for lang tid i nmea-processen!"
+
+#: ../nmea.py:820
+msgid "nmea bridge lost server connection"
+msgstr "nmea bridge mistet serverforbindelse"
+
+#: ../nmea.py:823
+msgid "nmea bridge lost pipe to autopilot"
+msgstr "nmea bridge mistet rør til autopilot"
+
+#: ../nmea.py:847
+msgid "nmea bridge unhandled poll flag"
+msgstr "nmea bridge uhåndteret afstemningsflag"
+
+#: ../nmea.py:907
+msgid "nmea process loop too slow:"
+msgstr "nmea procesløkke for langsom:"
+
+#: ../nonblockingpipe.py:40
+msgid "error pipe block on recv!"
+msgstr "fejl rørblok på recv!"
+
+#: ../nonblockingpipe.py:42
+msgid "failed to recv nonblocking pipe!"
+msgstr "mislykkedes med at recv non-blocking pipe!"
+
+#: ../nonblockingpipe.py:69
+msgid "pipe full"
+msgstr "rør fuldt"
+
+#: ../nonblockingpipe.py:69
+msgid "cannot send"
+msgstr "kan ikke sende"
+
+#: ../nonblockingpipe.py:89 ../nonblockingpipe.py:145
+msgid "failed to decode data socket!"
+msgstr "mislykkedes med at afkode datasocket!"
+
+#: ../nonblockingpipe.py:103
+msgid "failed to encode data socket!"
+msgstr "kunne ikke kode dataforbindelse!"
+
+#: ../nonblockingpipe.py:155
+msgid "failed write"
+msgstr "mislykket skrivning"
+
+#: ../server.py:106
+msgid "ERROR no connections in watch"
+msgstr "FEJL ingen forbindelser i uret"
+
+#: ../server.py:209
+msgid "remove duplicate udp connection"
+msgstr "fjern dublet udp-forbindelse"
+
+#: ../server.py:486
+msgid "failed to monitor "
+msgstr "undlod at overvåge"
+
+#: ../server.py:490
+msgid "creating config directory: "
+msgstr "oprettelse af konfigurationsmappe:"
+
+#: ../server.py:497
+msgid "failed to load"
+msgstr "kunne ikke indlæses"
+
+#: ../server.py:508
+msgid "backup data failed as well"
+msgstr "sikkerhedskopieringsdata mislykkedes også"
+
+#: ../server.py:570
+msgid "failed to write"
+msgstr "kunne ikke skrive"
+
+#: ../server.py:625
+msgid "pypilot_server: bind failed; already running a server?"
+msgstr "pypilot_server: bind mislykkedes; kører du allerede en server?"
+
+#: ../server.py:688
+msgid "persistent store took too long!"
+msgstr "vedvarende butik tog for lang tid!"
+
+#: ../server.py:706
+msgid "max connections reached"
+msgstr "maks. forbindelser nået"
+
+#: ../server.py:709
+msgid "server add socket"
+msgstr "server tilføje stikkontakt"
+
+#: ../server.py:719
+msgid "internal pipe closed, server exiting"
+msgstr "internt rør lukket, server afsluttes"
+
+#: ../server.py:771
+msgid "server socket closed from flush!!"
+msgstr "serverstik lukket fra skyl !!"
+
+#: ../signalk.py:52
+msgid "service removed"
+msgstr "tjeneste fjernet"
+
+#: ../signalk.py:55
+msgid "server lost"
+msgstr "server tabt"
+
+#: ../signalk.py:61
+msgid "service add"
+msgstr "service tilføj"
+
+#: ../signalk.py:86 ../client.py:210
+msgid "failed to"
+msgstr "var ikke i stand til at"
+
+#: ../signalk.py:86
+msgid "autodetection not possible"
+msgstr "autodetektion ikke mulig"
+
+#: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
+msgid "try"
+msgstr "prøve"
+
+#: ../signalk.py:87 ../signalk.py:176 ../signalk.py:246 ../client.py:211
+msgid "or"
+msgstr "eller"
+
+#: ../signalk.py:138
+msgid "read token"
+msgstr "læs token"
+
+#: ../signalk.py:141
+msgid "failed to read token"
+msgstr "kunne ikke læse token"
+
+#: ../signalk.py:171
+msgid "probe"
+msgstr "sonde"
+
+#: ../signalk.py:175
+msgid "could not"
+msgstr "kunne ikke"
+
+#: ../signalk.py:185
+msgid "failed to retrieve/parse data from"
+msgstr "kunne ikke hente / parsere data fra"
+
+#: ../signalk.py:201
+msgid "see if token is ready"
+msgstr "se om token er klar"
+
+#: ../signalk.py:207
+msgid "received token"
+msgstr "modtaget token"
+
+#: ../signalk.py:213
+msgid "failed to store token"
+msgstr "mislykkedes at gemme token"
+
+#: ../signalk.py:217 ../signalk.py:238
+msgid "error requesting access"
+msgstr "fejl ved anmodning om adgang"
+
+#: ../signalk.py:236
+msgid "request access url"
+msgstr "anmode om adgangs -url"
+
+#: ../signalk.py:245
+msgid "cannot create connection:"
+msgstr "kan ikke oprette forbindelse:"
+
+#: ../signalk.py:260
+msgid "bad status, rejecting token"
+msgstr "dårlig status, afviser token"
+
+#: ../signalk.py:264
+msgid "connection refused"
+msgstr "forbindelse nægtet"
+
+#: ../signalk.py:313
+msgid "server found"
+msgstr "server fundet"
+
+#: ../signalk.py:334
+msgid "connected to"
+msgstr "forbundet til"
+
+#: ../signalk.py:416
+msgid "Exception converting signalk->pypilot"
+msgstr "Undtagelse, der konverterer skilt-> pypilot"
+
+#: ../signalk.py:430
+msgid "received"
+msgstr "modtaget"
+
+#: ../signalk.py:493
+msgid "failed to send updates"
+msgstr "kunne ikke sende opdateringer"
+
+#: ../signalk.py:507
+msgid "failed to parse msg:"
+msgstr "kunne ikke analysere msg:"
+
+#: ../sensors.py:49
+msgid "sensor found"
+msgstr "sensor fundet"
+
+#: ../sensors.py:413
+msgid "unknown data parsed!"
+msgstr "ukendte data analyseret!"
+
+#: ../calibration_fit.py:38
+msgid "failed to load scientific library, cannot perform calibration update!"
+msgstr ""
+"mislykkedes at indlæse videnskabeligt bibliotek, kan ikke udføre "
+"kalibreringsopdatering!"
+
+#: ../calibration_fit.py:701
+msgid "Bad Accelerometer Calibration"
+msgstr "Dårlig kalibrering af accelerometer"
+
+#: ../calibration_fit.py:735
+msgid "magnetic distortions"
+msgstr "magnetiske forvrængninger"
+
+#: ../pilots/__init__.py:22
+msgid "ERROR loading"
+msgstr "FEJL indlæses"
+
+#: ../autopilot.py:135
+msgid "failed to load pilot"
+msgstr "mislykkedes at indlæse pilot"
+
+#: ../autopilot.py:138
+msgid "Available Pilots"
+msgstr "Tilgængelige piloter"
+
+#: ../autopilot.py:157
+msgid "warning: failed to open special file"
+msgstr "advarsel: den specielle fil kunne ikke åbnes"
+
+#: ../autopilot.py:157
+msgid "for writing"
+msgstr "til skrivning"
+
+#: ../autopilot.py:158
+msgid "cannot stroke the watchdog"
+msgstr "kan ikke stryge vagthunden"
+
+#: ../autopilot.py:162
+msgid "warning: failed to make autopilot process realtime"
+msgstr "advarsel: kunne ikke gøre autopilot-processen realtid"
+
+#: ../autopilot.py:347
+msgid "server/client is running too _slowly_"
+msgstr "server / klient kører også _slowly_"
+
+#: ../autopilot.py:353
+msgid "sensors is running too _slowly_"
+msgstr "sensorer kører for langsomt"
+
+#: ../autopilot.py:453
+msgid "autopilot routine is running too _slowly_"
+msgstr "autopilotrutinen kører for langsomt"
+
+#: ../autopilot.py:465
+msgid "servo is running too _slowly_"
+msgstr "servo kører for langsomt"
+
+#: ../autopilot.py:475
+msgid "autopilot iteration running too slow"
+msgstr "autopilot iteration kører for langsomt"
+
+#: ../autopilot.py:488
+msgid "WARNING: running autopilot as root!!"
+msgstr "ADVARSEL: kører autopilot som root!!"
+
+#: ../autopilot.py:490
+msgid "init complete"
+msgstr "init komplet"
+
+#: ../boatimu.py:33
+msgid "RTIMU library not detected, please install it"
+msgstr "RTIMU-biblioteket blev ikke fundet. Installer det"
+
+#: ../boatimu.py:57
+msgid "Using settings file"
+msgstr "Brug af indstillingsfil"
+
+#: ../boatimu.py:97
+msgid "ERROR: No IMU Detected"
+msgstr "FEJL: Ingen IMU fundet"
+
+#: ../boatimu.py:105
+msgid "ERROR: IMU Init Failed, no inertial data available"
+msgstr "FEJL: IMU-start mislykkedes, ingen inertialdata er tilgængelige"
+
+#: ../boatimu.py:131
+msgid "warning, failed to make imu process realtime"
+msgstr "advarsel, kunne ikke imu-processen realtid"
+
+#: ../boatimu.py:133
+msgid "made imu process realtime"
+msgstr "lavet imu-proces i realtid"
+
+#: ../boatimu.py:145
+msgid "setting initial gyro bias"
+msgstr "indstilling af indledende gyro bias"
+
+#: ../boatimu.py:161
+msgid "imu process failed to keep time"
+msgstr "imu-processen kunne ikke holde tiden"
+
+#: ../boatimu.py:169
+msgid "failed to read IMU!"
+msgstr "kunne ikke læse IMU!"
+
+#: ../boatimu.py:202
+msgid "imu rate set to rate"
+msgstr "imu rate indstillet til rate"
+
+#: ../boatimu.py:230
+msgid "too high standing gyro bias, resetting sensors"
+msgstr "for høj stående gyro bias, nulstilling af sensorer"
+
+#: ../boatimu.py:235
+msgid "compass out of range, resetting"
+msgstr "kompas uden for rækkevidde, nulstilling"
+
+#: ../boatimu.py:327
+msgid "warning, failed to make calibration process other"
+msgstr "advarsel, kalibreringsprocessen blev ikke anden"
+
+#: ../boatimu.py:329
+msgid "warning, failed to make calibration process idle, trying renice"
+msgstr ""
+"advarsel, kunne kalibreringsprocessen ikke være inaktiv, og forsøg på at "
+"forsømme"
+
+#: ../boatimu.py:331
+msgid "warning, failed to renice calibration process"
+msgstr "advarsel, mislykkedes kalibreringsprocessen"
+
+#: ../boatimu.py:338
+msgid "calibration loaded, starting"
+msgstr "kalibrering indlæst, startende"
+
+#: ../boatimu.py:342
+msgid "failed import calibration fit"
+msgstr "mislykket importkalibreringstilpasning"
+
+#: ../boatimu.py:460
+msgid "accel values invalid"
+msgstr "accel-værdier ugyldige"
+
+#: ../bufferedsocket.py:55
+msgid "overflow in pypilot udp socket"
+msgstr "overløb i pypilot udp-stik"
+
+#: ../bufferedsocket.py:60
+msgid "overflow in pypilot socket"
+msgstr "overløb i pypilotstik"
+
+#: ../bufferedsocket.py:75
+msgid "failed to send udp packet"
+msgstr "mislykkedes at sende udp-pakke"
+
+#: ../bufferedsocket.py:84
+msgid "pypilot socket failed to send to"
+msgstr "pypilot-stikket kunne ikke sendes til"
+
+#: ../bufferedsocket.py:98
+msgid "socket send took too long!?!?"
+msgstr "socket send tog for lang tid!?!?"
+
+#: ../bufferedsocket.py:100
+msgid "socket send error"
+msgstr "stikket send fejl"
+
+#: ../bufferedsocket.py:104
+msgid "pypilot socket exception"
+msgstr "undtagelse af pypilotstik"
+
+#: ../bufferedsocket.py:108
+msgid "falling back to python nonblocking socket, will consume more cpu"
+msgstr "falder tilbage til python nonblocking-sokkel, forbruger mere CPU"
+
+#: ../bufferedsocket.py:134
+msgid "socket send error in server flush"
+msgstr "stikket sende fejl i server skylning"
+
+#: ../bufferedsocket.py:149
+msgid "error receiving data"
+msgstr "fejl ved modtagelse af data"
+
+#: ../serialprobe.py:30
+msgid "error reading"
+msgstr "fejllæsning"
+
+#: ../serialprobe.py:86
+msgid "found more devices by path"
+msgstr "fundet flere enheder efter sti"
+
+#: ../serialprobe.py:118
+msgid "removing gps device"
+msgstr "fjernelse af GPS-enhed"
+
+#: ../serialprobe.py:197
+msgid "no pyudev module! will scan usb devices often!"
+msgstr "intet pyudev-modul! scanner ofte usb-enheder!"
+
+#: ../serialprobe.py:359
+msgid "success"
+msgstr "succes"
+
+#: ../serialprobe.py:367
+msgid "failed to record device"
+msgstr "kunne ikke optage enhed"
+
+#: ../client.py:93
+msgid "warning, registering existing value:"
+msgstr "advarsel, registrering af eksisterende værdi:"
+
+#: ../client.py:154
+msgid "failed to read config file:"
+msgstr "mislykkedes at læse konfigurationsfil:"
+
+#: ../client.py:188
+msgid "failed to write config file:"
+msgstr "mislykkedes at skrive konfigurationsfil:"
+
+#: ../client.py:190
+msgid "Exception writing config file:"
+msgstr "Undtagelsesskrivning konfigurationsfil:"
+
+#: ../client.py:210
+msgid "autodetecting pypilot server not possible"
+msgstr "autodetektering af pypilotserver er ikke mulig"
+
+#: ../client.py:319
+msgid "invalid message from server:"
+msgstr "ugyldig besked fra server:"
+
+#: ../client.py:343
+msgid "warning, pypilot client aleady has connection"
+msgstr "advarsel, pypilot-klienten har allerede forbindelse"
+
+#: ../client.py:363
+msgid "connect failed to"
+msgstr "forbindelse mislykkedes"
+
+#: ../client.py:460 ../client.py:463
+msgid "failed to connect to"
+msgstr "kunne ikke oprette forbindelse til"
+
+#: ../client.py:466
+msgid "no pypilot server found"
+msgstr "ingen pypilotserver fundet"
+
+#: ../client.py:522
+msgid "usage"
+msgstr "brug"
+
+#: ../client.py:525
+msgid "set the host or ip address"
+msgstr "indstil værten eller ip-adressen"
+
+#: ../client.py:526
+msgid "print info about each value type"
+msgstr "udskriv info om hver værditype"
+
+#: ../client.py:527
+msgid "continuous watch"
+msgstr "kontinuerligt ur"
+
+#: ../client.py:528
+msgid "show this message"
+msgstr "vis denne besked"
+
+#: ../client.py:555
+msgid "failed to retrieve value list!"
+msgstr "kunne ikke hente værdilisten!"
+
+#: ../client.py:566
+msgid "timeout retrieving"
+msgstr "timeout hentning"
+
+#: ../client.py:569
+msgid "missing"
+msgstr "mangler"
+
+#: ../values.py:135
+msgid "invalid initial value for range property"
+msgstr "ugyldig startværdi for områdeegenskab"
+
+#: ../values.py:184
+msgid "invalid set"
+msgstr "ugyldigt sæt"
+
+#: ../gpsd.py:46
+msgid "gpsd connected"
+msgstr "gpsd tilsluttet"
+
+#: ../gpsd.py:50
+msgid "gpsd failed to connect"
+msgstr "gpsd kunne ikke oprette forbindelse"
+
+#: ../gpsd.py:56
+msgid "exception connecting to gps"
+msgstr "undtagelse, der forbinder til GPS"
+
+#: ../gpsd.py:60
+msgid "gpsd disconnected"
+msgstr "gpsd afbrudt"
+
+#: ../gpsd.py:74
+msgid "gpsd PROBE success"
+msgstr "gpsd PROBE succes"
+
+#: ../gpsd.py:82
+msgid "gpsd probe failed"
+msgstr "gpsd-probe mislykkedes"
+
+#: ../gpsd.py:105
+msgid "gpsd deactivated"
+msgstr "gpsd deaktiveret"
+
+#: ../gpsd.py:147
+msgid "gpsd failed to determine serial baud rate of device"
+msgstr "gpsd kunne ikke bestemme enhedens serielle baudrate"
+
+#: ../gpsd.py:164
+msgid "gpsd timeout from lack of data"
+msgstr "gpsd timeout fra mangel på data"
+
+#: ../gpsd.py:179
+msgid "gpsd received invalid message"
+msgstr "gpsd modtog ugyldig besked"
+
+#: ../gpsd.py:224
+msgid "gpsd got flag for pipe:"
+msgstr "gpsd fik flag til rør:"
+
+#: ../gpsd.py:233
+msgid "gpsd serial probe"
+msgstr "gpsd seriel probe"
+
+#~ msgid "exception in calibration:"
+#~ msgstr "undtagelse i kalibrering:"
+
+#~ msgid "warning: unhandled message"
+#~ msgstr "advarsel: uhåndteret besked"
+
+#~ msgid "Autopilot Control"
+#~ msgstr "Autopilot kontrol"
+
+#~ msgid "AP"
+#~ msgstr "Du"
+
+#~ msgid "N/A"
+#~ msgstr "Ikke relevant"
+
+#~ msgid "        N/A        "
+#~ msgstr "Ikke relevant"
+
+#~ msgid "----"
+#~ msgstr "----"
+
+#~ msgid " N/A "
+#~ msgstr "Ikke relevant"
+
+#~ msgid "port"
+#~ msgstr "Havn"
+
+#~ msgid "starboard"
+#~ msgstr "styrbord"
+
+#~ msgid "Pilot"
+#~ msgstr "Pilot"
+
+#~ msgid "Compass"
+#~ msgstr "Kompas"
+
+#~ msgid "GPS"
+#~ msgstr "GPS"
+
+#~ msgid "Wind"
+#~ msgstr "Vind"
+
+#~ msgid "True Wind"
+#~ msgstr "Sand vind"
+
+#~ msgid "Center"
+#~ msgstr "Centrum"
+
+#~ msgid "&Scope"
+#~ msgstr "&Omfang"
+
+#~ msgid "&Client"
+#~ msgstr "&Klient"
+
+#~ msgid "C&alibration"
+#~ msgstr "K&alibrering"
+
+#~ msgid "Close"
+#~ msgstr "Tæt"
+
+#~ msgid "Calibration"
+#~ msgstr "Kalibrering"
+
+#~ msgid "Boat is level"
+#~ msgstr "Båden er plan"
+
+#~ msgid "Reset"
+#~ msgstr "Nulstil"
+
+#~ msgid "Alignment"
+#~ msgstr "Justering"
+
+#~ msgid "Heading"
+#~ msgstr "Overskrift"
+
+#~ msgid "     N/A     "
+#~ msgstr "Ikke relevant"
+
+#~ msgid "Offset"
+#~ msgstr "Offset"
+
+#~ msgid "Coords"
+#~ msgstr "Koordiner"
+
+#~ msgid "Sea"
+#~ msgstr "Hav"
+
+#~ msgid "Boat"
+#~ msgstr "Båd"
+
+#~ msgid "Scope"
+#~ msgstr "Anvendelsesområde"
+
+#~ msgid "Pitch"
+#~ msgstr "Tonehøjde"
+
+#~ msgid "Roll"
+#~ msgstr "Rulle"
+
+#~ msgid "Heel"
+#~ msgstr "Hæl"
+
+#~ msgid "alignment"
+#~ msgstr "justering"
+
+#~ msgid "Calibration Age"
+#~ msgstr "Kalibreringsalder"
+
+#~ msgid "Clear"
+#~ msgstr "Klar"
+
+#~ msgid "calibration locked"
+#~ msgstr "kalibrering låst"
+
+#~ msgid "accel"
+#~ msgstr "accelere"
+
+#~ msgid "Sigma Points"
+#~ msgstr "Sigma Points"
+
+#~ msgid "local history"
+#~ msgstr "lokal historie"
+
+#~ msgid "current"
+#~ msgstr "nuværende"
+
+#~ msgid "Calibration Points"
+#~ msgstr "Kalibreringspunkter"
+
+#~ msgid "compass"
+#~ msgstr "kompas"
+
+#~ msgid ""
+#~ "Press each button when the rudder is at the correct position to calibrate."
+#~ msgstr ""
+#~ "Tryk på hver knap, når roret er i den rigtige position for at kalibrere."
+
+#~ msgid "Rudder"
+#~ msgstr "Ror"
+
+#~ msgid "Reset Calibration"
+#~ msgstr "Nulstil kalibrering"
+
+#~ msgid "Rudder Is Centered"
+#~ msgstr "Ror er centreret"
+
+#~ msgid "------"
+#~ msgstr "------"
+
+#~ msgid "Rudder is Starboard Range"
+#~ msgstr "Ror er styrbords rækkevidde"
+
+#~ msgid "Scale"
+#~ msgstr "vægt"
+
+#~ msgid "Rudder is Port Range"
+#~ msgstr "Ror er havneområde"
+
+#~ msgid "Non Linearity"
+#~ msgstr "Ikke-lineæritet"
+
+#~ msgid " range +-"
+#~ msgstr "rækkevidde + -"
+
+#~ msgid "degrees"
+#~ msgstr "grader"
+
+#~ msgid "rudder"
+#~ msgstr "ror"
+
+#~ msgid "settings"
+#~ msgstr "indstillinger"
+
+#~ msgid "failed to load pywavefront:"
+#~ msgstr "mislykkedes at indlæse pywavefront:"
+
+#~ msgid "invalid display dimensions"
+#~ msgstr "ugyldige displaydimensioner"
+
+#~ msgid "Did you add the pypilot_data repository?"
+#~ msgstr "Tilføjede du pypilot_data-lageret?"
+
+#~ msgid "not found, texture compass cannot be used"
+#~ msgstr "ikke fundet, tekstur kompas kan ikke bruges"
+
+#~ msgid "Refresh"
+#~ msgstr "Opdater"
+
+#~ msgid "Connected"
+#~ msgstr "Forbundet"
+
+#~ msgid "Disconnected"
+#~ msgstr "Afbrudt"
+
+#~ msgid "warning, invalid choice value specified"
+#~ msgstr "advarsel, ugyldig valgværdi specificeret"
+
+#~ msgid "pypilot Scope"
+#~ msgstr "pypilot Anvendelsesområde"
+
+#~ msgid "Zero"
+#~ msgstr "Nul"
+
+#~ msgid "Scale +"
+#~ msgstr "Skala +"
+
+#~ msgid "Scale -"
+#~ msgstr "Vægt -"
+
+#~ msgid "Offset /\\"
+#~ msgstr "Offset / \\"
+
+#~ msgid "Offset \\/"
+#~ msgstr "Forskydning \\ /"
+
+#~ msgid "Freeze"
+#~ msgstr "Fryse"
+
+#~ msgid "fftw"
+#~ msgstr "fftw"
+
+#~ msgid "Time"
+#~ msgstr "Tid"
+
+#~ msgid "values not found:"
+#~ msgstr "værdier ikke fundet:"
+
+#~ msgid "in"
+#~ msgstr "i"
+
+#~ msgid "seconds"
+#~ msgstr "sekunder"
+
+#~ msgid "nmea client failed to connect to"
+#~ msgstr "nmea-klienten kunne ikke oprette forbindelse til"
+
+#~ msgid "failed to create nmea socket as host:port"
+#~ msgstr "kunne ikke oprette nmea-sokkel som vært: port"
+
+#~ msgid "terminate calibration process"
+#~ msgstr "afslut kalibreringsprocessen"
