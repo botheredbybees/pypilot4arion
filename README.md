@@ -4,7 +4,7 @@ Open-source autopilot retrofit for 36ft yacht *Arion* using pypilot with hydraul
 
 ## Project Overview
 
-This project documents the installation and configuration of a pypilot-based autopilot system on *Arion*, a 36-foot sailboat with existing hydraulic steering. The installation **replaces a non-functional TQM AP8 autopilot** (removing all legacy solenoids and control electronics) with a modern system using an **IBT-2 motor controller with dual BTS7960B H-bridge chips** driving the existing **Octopus Model 1012 hydraulic pump** directly.
+This project documents the installation and configuration of a pypilot-based autopilot system on *Arion*, a 36-foot sailboat with existing hydraulic steering. The installation **replaces a non-functional TQM AP8 autopilot** (removing all legacy solenoid electronics and control circuitry) with a modern system using an **IBT-2 motor controller with dual BTS7960B H-bridge chips** driving the existing **Octopus Model 1012 hydraulic pump** directly.
 
 The system uses a dual-Raspberry Pi architecture combining reliability and functionality:
 - **Tinypilot** on Raspberry Pi Zero W for dedicated autopilot control
@@ -27,13 +27,14 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
   - Integrated thermal protection
 - **Hydraulic Pump**: Octopus Model 1012 (12V DC, retained from original installation)
 - **Motor Connection**: Direct PWM control from IBT-2 to hydraulic pump motor (no solenoids)
+- **GPS Receiver**: USB GPS (NMEA 0183) connected directly to Pi Zero W for standalone GPS mode operation
 - **Rudder Feedback**: Analog or digital rudder position sensor
 - **Power**: 12V DC ship's power with 30A inline fuse protection
 
 **Legacy Hardware Removed:**
 - TQM AP8 autopilot control unit
-- 4x solenoid valves (H-bridge configuration)
-- Associated solenoid wiring and relay circuits
+- 4x solenoid valves (used as H-bridge for pump motor polarity control)
+- Associated solenoid control wiring and relay circuits
 
 #### Navigation System (Lysmarine)
 - **Computer**: Raspberry Pi 4 (8GB RAM)
@@ -41,7 +42,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 - **Storage**: 512GB SSD
 - **Operating System**: Lysmarine (BBN OS - Bareboat Necessities OS)
 - **Display**: Compatible marine display or standard HDMI monitor
-- **GPS**: External GPS receiver (NMEA 0183/2000 via USB or serial)
+- **GPS**: Optional second GPS receiver for OpenCPN (NMEA 0183/2000 via USB or serial)
 - **Wind Sensor** (planned future addition):
   - **Ecowit WS80** Ultrasonic 6-in-1 Sensor (Wind Speed/Direction, Solar Radiation, Light, Temperature, Humidity)
   - **RTL-SDR V3/V4 USB dongle** for 433MHz/915MHz reception
@@ -62,10 +63,10 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 - **Motor Controller Firmware**: Arduino-based pypilot motor driver with IBT-2 support
 - **Control Modes**: 
   - Compass (magnetic heading) - **fully standalone, no network required**
-  - GPS (track following) - requires GPS data via network
+  - GPS (track following) - **standalone with local GPS, no network required**
   - Wind (apparent wind angle) - requires wind sensor data (future)
   - True Wind (true wind angle) - requires GPS + wind data (future)
-  - NAV (route following) - requires waypoint data from OpenCPN
+  - NAV (route following) - requires waypoint data from OpenCPN via network
 
 #### Navigation & Integration
 - **Lysmarine (BBN OS)**: Comprehensive marine computing platform
@@ -76,7 +77,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 - **rtl_433 to SignalK bridge**: Converts decoded weather sensor data to SignalK format
 
 #### Data Protocols
-- **NMEA 0183**: GPS, wind, and sensor data (TCP port 10110)
+- **NMEA 0183**: GPS, wind, and sensor data (serial/USB on Pi Zero, TCP port 10110 over network)
 - **Pypilot TCP Protocol**: Autopilot control and status (TCP port 20220)
 - **SignalK WebSocket**: Real-time marine data distribution (TCP port 3000)
 - **MQTT** (optional): Alternative data transport for rtl_433 sensor data
@@ -92,7 +93,7 @@ Pixel 2 Phone Hotspot (192.168.43.1)
          |    ├── Lysmarine OS
          |    ├── OpenCPN (chartplotter)
          |    ├── SignalK (data hub)
-         |    ├── GPS receiver → NMEA data
+         |    ├── GPS receiver (optional) → NMEA data
          |    ├── RTL-SDR dongle + rtl_433 (future)
          |    │    └── Ecowit WS80 sensor (433/915MHz)
          |    └── Pypilot plugin (client)
@@ -101,6 +102,7 @@ Pixel 2 Phone Hotspot (192.168.43.1)
               ├── Tinypilot OS
               ├── Pypilot server (TCP 20220)
               ├── IMU (I2C)
+              ├── GPS receiver (USB) → local NMEA for standalone GPS mode
               ├── Rudder feedback sensor (analog/digital)
               └── Motor controller (GPIO PWM)
                    |
@@ -111,14 +113,14 @@ Pixel 2 Phone Hotspot (192.168.43.1)
                         ├── R_IS/L_IS (Current Sense) → ADC
                         └── Motor Output (+/-)
                              |
-                             └── Octopus 1012 Hydraulic Pump (12V DC)
+                             └── Octopus 1012 Hydraulic Pump (12V DC motor)
                                   |
                                   └── Hydraulic Steering Ram
 ```
 
 ### IBT-2 Motor Controller Connection
 
-The IBT-2 provides **direct bidirectional PWM control** of the hydraulic pump motor without intermediate solenoids:
+The IBT-2 provides **direct bidirectional PWM control** of the hydraulic pump motor without intermediate solenoids. The legacy TQM AP8 used 4 solenoids as an H-bridge to control pump motor polarity (on/off only). The IBT-2 replaces this with **proportional PWM control** for smooth, efficient steering.
 
 **Pi Zero GPIO to IBT-2 Wiring:**
 ```
@@ -135,8 +137,8 @@ GND             GND            Common ground
 
 **IBT-2 to Hydraulic Pump:**
 ```
-Motor+ (out)  →  Hydraulic pump positive terminal
-Motor- (out)  →  Hydraulic pump negative terminal
+Motor+ (out)  →  Hydraulic pump motor positive terminal
+Motor- (out)  →  Hydraulic pump motor negative terminal
 B+ (power in) →  12V ship's power (30A fused)
 B- (power in) →  12V ground/negative bus
 ```
@@ -149,11 +151,16 @@ B- (power in) →  12V ground/negative bus
 
 ### Data Flow
 
-**GPS to Autopilot:**
-1. GPS receiver → Lysmarine Pi 4 (USB/serial)
-2. SignalK processes and broadcasts NMEA data (UDP/TCP)
-3. Tinypilot Pi Zero receives GPS via TCP connection
-4. Pypilot uses GPS data for GPS track and NAV modes
+**GPS to Autopilot (Standalone Mode):**
+1. USB GPS receiver connected directly to Pi Zero W USB port
+2. Pypilot reads NMEA sentences from USB serial device (auto-detected at 4800 or 38400 baud)
+3. Pypilot uses GPS data for GPS track mode **without requiring network or Pi 4**
+4. Pi Zero operates fully standalone for both Compass and GPS modes
+
+**GPS to Navigation System (Optional):**
+1. Second GPS receiver → Lysmarine Pi 4 (USB/serial) for OpenCPN chartplotting
+2. SignalK processes and broadcasts NMEA data for other instruments
+3. GPS data also available via network to Tinypilot if needed
 
 **Wind Data to Autopilot (Future):**
 1. Ecowit WS80 sensor transmits 433/915MHz RF signals
@@ -161,8 +168,8 @@ B- (power in) →  12V ground/negative bus
 3. rtl_433 decodes weather sensor protocol
 4. rtl_433-to-SignalK bridge converts to marine format
 5. SignalK broadcasts wind data (apparent wind speed/direction)
-6. Pypilot receives wind data for Wind mode calculations
-7. Pypilot calculates true wind using GPS speed/heading
+6. Pypilot receives wind data via network for Wind mode calculations
+7. Pypilot calculates true wind using local GPS speed/heading
 
 **Autopilot Control Loop:**
 1. User sets heading via OpenCPN or Tinypilot web interface
@@ -185,11 +192,12 @@ B- (power in) →  12V ground/negative bus
 ## Key Features
 
 ### Reliability
-- **Standalone Operation**: Tinypilot operates independently in Compass mode without network, GPS, or Pi 4
+- **Standalone Operation**: Tinypilot operates independently in Compass and GPS modes without network or Pi 4
+- **Local GPS**: USB GPS connected directly to Pi Zero enables GPS track mode without network dependency
 - **RAM-based OS**: Tinypilot runs entirely from RAM after boot—safe power disconnection, no SD card corruption
 - **Dual-System Redundancy**: Navigation computer failure doesn't affect autopilot operation
-- **Minimal Power**: Pi Zero consumes ~200mA (2.4W) for extended offshore passages
-- **No Solenoid Complexity**: Direct motor control eliminates solenoid failure modes and valve leakage
+- **Minimal Power**: Pi Zero + USB GPS consumes ~3W for extended offshore passages
+- **No Solenoid Complexity**: Direct motor control eliminates solenoid failure modes and electrical relay issues
 - **Proportional Control**: PWM allows smooth, proportional steering (not just on/off bang-bang)
 
 ### Safety
@@ -217,15 +225,16 @@ B- (power in) →  12V ground/negative bus
 
 ### Phase 1: Hardware Removal & Preparation
 1. **Remove legacy TQM AP8 system**:
-   - Disconnect all solenoid wiring and control cables
-   - Remove 4x solenoid valves from hydraulic system
-   - Remove TQM AP8 control unit and power connections
-   - Cap or plug hydraulic ports where solenoids were removed
+   - Disconnect all solenoid control wiring and power connections
+   - Remove 4x solenoid valves from boat (they were used as H-bridge for motor polarity switching)
+   - Remove TQM AP8 control unit and associated electronics
+   - Clean up wiring harnesses and mounting locations
 2. **Verify Octopus 1012 hydraulic pump**:
-   - Test pump motor operates on 12V DC (direct connection test)
+   - Test pump motor operates on 12V DC (direct connection test with polarity reversal)
    - Measure pump current draw under load (typically 15-25A)
    - Check hydraulic fluid level and condition
    - Verify hydraulic ram operates smoothly through full range
+   - Confirm no hydraulic leaks in system
 
 ### Phase 2: Autopilot Hardware Installation
 1. Mount Raspberry Pi Zero W near compass location (away from magnetic interference)
@@ -240,8 +249,12 @@ B- (power in) →  12V ground/negative bus
    - Connect B+ to 12V positive bus via 30A inline fuse
    - Connect B- to 12V negative/ground bus
    - Use 10AWG or heavier wire for power supply
-7. Install rudder feedback sensor on rudder shaft or hydraulic ram
-8. Connect rudder sensor to Pi Zero (analog ADC or digital encoder interface)
+7. **Connect USB GPS receiver to Pi Zero W**:
+   - Use USB GPS with NMEA 0183 output (4800 or 38400 baud)
+   - Connect to Pi Zero USB port (may require micro-USB OTG adapter)
+   - GPS powers from Pi Zero USB port (verify power consumption < 500mA)
+8. Install rudder feedback sensor on rudder shaft or hydraulic ram
+9. Connect rudder sensor to Pi Zero (analog ADC or digital encoder interface)
 
 ### Phase 3: Tinypilot Software Setup
 1. Flash Tinypilot image to Pi Zero SD card
@@ -252,21 +265,26 @@ B- (power in) →  12V ground/negative bus
    - Configure GPIO pin assignments (RPWM, LPWM, R_EN, L_EN)
    - Set PWM frequency (typically 10-20kHz for DC motors)
    - Enable current sense inputs if wired (R_IS, L_IS)
-5. **Initial motor direction test**:
+5. **Configure GPS receiver**:
+   - Pypilot should auto-detect USB GPS device (appears as /dev/ttyUSB0 or /dev/ttyACM0)
+   - Verify NMEA sentences are received (check for RMC, GGA, VTG sentences)
+   - Test GPS fix acquisition (may take 1-5 minutes for cold start)
+6. **Initial motor direction test**:
    - Engage autopilot in manual control mode
    - Command small starboard turn → verify rudder moves starboard
    - Command small port turn → verify rudder moves port
    - If reversed, swap RPWM/LPWM pins or invert in software
-6. Calibrate IMU (compass, accelerometer, alignment)
-7. Configure rudder feedback sensor range and calibration
-8. Tune PID parameters for hydraulic system response
+7. Calibrate IMU (compass, accelerometer, alignment)
+8. Configure rudder feedback sensor range and calibration
+9. Tune PID parameters for hydraulic system response
 
 ### Phase 4: Lysmarine Integration
 1. Verify Lysmarine Pi 4 connects to Pixel 2 phone hotspot
 2. Install OpenCPN pypilot plugin
 3. Configure plugin to connect to Tinypilot IP (192.168.43.101:20220)
-4. Configure SignalK to broadcast GPS data to Tinypilot
-5. Test Compass mode and GPS track mode
+4. Configure SignalK to receive autopilot data from Tinypilot
+5. Test Compass mode and GPS track mode via OpenCPN interface
+6. (Optional) Connect second GPS to Pi 4 for independent OpenCPN navigation
 
 ### Phase 5: Wind Sensor Integration (Future)
 1. Install Ecowit WS80 sensor at masthead or suitable location
@@ -281,23 +299,26 @@ B- (power in) →  12V ground/negative bus
    - Install rtl_433-to-signalk bridge or MQTT integration
    - Map WS80 wind speed/direction to SignalK paths
    - Configure apparent wind calculation in SignalK
-6. Test Wind mode and True Wind mode in pypilot
+6. Test Wind mode and True Wind mode in pypilot (via network data from Pi 4)
 
 ### Phase 6: Testing and Tuning
 1. **Dockside testing**: 
    - Verify motor controller responds to all commands
    - Check current sense readings match expectations
    - Test emergency stop functionality
+   - Verify GPS acquisition and position reporting
 2. **Motoring trials**: 
    - Test compass mode stability in straight-line motoring
+   - Test GPS track mode following straight line waypoint
    - Verify manual override functions properly
    - Tune PID gains for smooth response without oscillation
 3. **Sailing trials**: 
    - Test in various sea states and wind conditions
    - Tune PID gains for heel compensation
    - Verify power consumption acceptable for long passages
+   - Test GPS track mode following curved routes
 4. **Advanced mode testing**: 
-   - GPS track following accuracy
+   - GPS track following accuracy over multiple waypoints
    - Wind mode performance (after sensor installation)
    - NAV mode route following from OpenCPN
 5. **Emergency procedures**: 
@@ -339,6 +360,19 @@ servo.pwm_frequency = 15000  # Hz (10-20kHz typical for DC motors)
 servo.min_speed = 0.1  # Minimum PWM duty cycle (deadband compensation)
 ```
 
+### GPS Configuration
+```python
+# GPS auto-detection on Pi Zero
+# Pypilot will scan for USB serial devices and detect NMEA output
+# Common device names: /dev/ttyUSB0, /dev/ttyACM0
+# Supported baud rates: 4800, 38400 (auto-detected)
+
+# Manual configuration if needed:
+gps.device = '/dev/ttyUSB0'  # or /dev/ttyACM0
+gps.baud = 4800  # or 38400
+gps.enabled = true
+```
+
 ### Network Configuration
 ```bash
 # /etc/wpa_supplicant/wpa_supplicant.conf on Tinypilot Pi Zero
@@ -376,23 +410,25 @@ output mqtt://localhost:1883,retain=0,events=rtl_433/devices[/model][/id]
 
 | Component Failure | Autopilot Status | Available Modes | Motor Control | Notes |
 |------------------|------------------|-----------------|---------------|-------|
-| Pixel 2 phone hotspot offline | **Continues normally** | Compass only | **Fully operational** | No GPS/Wind/NAV modes |
-| Lysmarine Pi 4 offline | **Continues normally** | Compass only | **Fully operational** | No OpenCPN integration |
-| Both network systems offline | **Continues normally** | Compass only | **Fully operational** | Use RF remote or GPIO buttons |
+| Pixel 2 phone hotspot offline | **Continues normally** | Compass, GPS (local) | **Fully operational** | No Wind/NAV modes, no OpenCPN integration |
+| Lysmarine Pi 4 offline | **Continues normally** | Compass, GPS (local) | **Fully operational** | No OpenCPN, no network wind data |
+| Both network systems offline | **Continues normally** | Compass, GPS (local) | **Fully operational** | Fully autonomous with local GPS |
 | Pi Zero power loss | **Stops immediately** | None | **No control** | Manual steering required |
 | Motor controller fault | **Stops immediately** | None | **No control** | Check IBT-2, fuses, connections |
 | IBT-2 thermal shutdown | **Stops temporarily** | Resumes when cool | **Disabled until cool** | Reduce max_current or improve cooling |
 | Hydraulic pump stall | **Current sense detects** | Error state | **Reduced power** | Check hydraulic fluid, ram binding |
 | IMU failure | **Error state** | None | **No reliable heading** | Manual steering required |
+| USB GPS failure | **Compass mode only** | Compass only | **Fully operational** | GPS and NAV modes unavailable |
 
-**Critical Safety Note**: Compass mode is fully standalone and requires only:
+**Critical Safety Note**: Compass and GPS modes are fully standalone and require only:
 - Pi Zero with power
 - Functional IMU (compass heading)
+- USB GPS receiver (for GPS mode)
 - IBT-2 motor controller
 - Rudder feedback sensor
 - Hydraulic pump and steering system
 
-Network connectivity is **optional** for all advanced features. Core steering never depends on WiFi.
+Network connectivity is **optional** for Wind mode and NAV route following only.
 
 ## Performance Characteristics
 
@@ -400,10 +436,12 @@ Network connectivity is **optional** for all advanced features. Core steering ne
 - **Rudder Response Time**: ~1-3 seconds (hydraulic system and motor controller dependent)
 - **Power Consumption**: 
   - Pi Zero: ~2.4W (200mA @ 12V)
+  - USB GPS: ~0.6W (50mA @ 12V via USB)
   - Pi 4: ~7.5W (625mA @ 12V) 
   - Hydraulic pump (active steering): 180-300W (15-25A @ 12V)
   - Hydraulic pump (holding course): ~60-120W intermittent
 - **IMU Update Rate**: 10-20 Hz
+- **GPS Update Rate**: 1-10 Hz (typical 1Hz)
 - **Control Loop Frequency**: 10 Hz
 - **PWM Frequency**: 10-20 kHz (configurable, affects motor noise and efficiency)
 - **Maximum Rudder Slew Rate**: 10-20°/sec (configurable, limited by hydraulic flow)
@@ -411,32 +449,35 @@ Network connectivity is **optional** for all advanced features. Core steering ne
 ## Bill of Materials (BOM)
 
 ### Core Autopilot Components
-- Raspberry Pi Zero W - ~$15 USD
-- Pypilot IMU (MPU9250 or ICM-20948 based) - ~$50-100 USD
-- IBT-2 Motor Controller (dual BTS7960B) - ~$15-20 USD
-- Rudder feedback sensor (potentiometer or Hall effect) - ~$20-50 USD
-- MicroSD card (16GB+, high endurance recommended) - ~$10 USD
-- Power wiring, fuses, connectors - ~$30 USD
-- **Total Core System**: ~$140-225 USD
+- Raspberry Pi Zero W - ~$A22 AUD
+- Pypilot IMU (MPU9250 or ICM-20948 based) - ~$A75-150 AUD
+- IBT-2 Motor Controller (dual BTS7960B) - ~$A22-30 AUD
+- USB GPS receiver (NMEA 0183, USB interface) - ~$A30-75 AUD
+- Rudder feedback sensor (potentiometer or Hall effect) - ~$A30-75 AUD
+- MicroSD card (16GB+, high endurance recommended) - ~$A15 AUD
+- Power wiring, fuses, connectors - ~$A45 AUD
+- **Total Core System**: ~$A239-397 AUD
 
 ### Navigation System (Existing)
-- Raspberry Pi 4 (8GB) - ~$75 USD
-- Argon ONE V2 case - ~$25 USD
-- 512GB SSD - ~$50 USD
-- GPS receiver - ~$30-100 USD
-- **Total Navigation**: ~$180-250 USD (already owned)
+- Raspberry Pi 4 (8GB) - ~$A110 AUD
+- Argon ONE V2 case - ~$A37 AUD
+- 512GB SSD - ~$A75 AUD
+- GPS receiver (optional second unit) - ~$A45-150 AUD
+- **Total Navigation**: ~$A267-372 AUD (already owned)
 
 ### Future Wind Sensor Addition
-- Ecowit WS80 6-in-1 sensor - ~$100-150 USD
-- RTL-SDR V3/V4 USB dongle - ~$25-40 USD
-- Mounting hardware, cabling - ~$20 USD
-- **Total Wind System**: ~$145-210 USD
+- Ecowit WS80 6-in-1 sensor - ~$A150-225 AUD
+- RTL-SDR V3/V4 USB dongle - ~$A37-60 AUD
+- Mounting hardware, cabling - ~$A30 AUD
+- **Total Wind System**: ~$A217-315 AUD
 
 ### Network
-- Google Pixel 2 phone (already owned) - $0 USD
+- Google Pixel 2 phone (already owned) - $A0 AUD
 - Mobile data plan (optional for weather) - varies
 
-**Total Project Cost**: ~$320-435 USD (excluding navigation system and wind sensor)
+**Total Project Cost**: ~$A239-397 AUD (core autopilot only, excluding navigation system and wind sensor)
+
+**Total with Future Wind Integration**: ~$A456-712 AUD
 
 ## Contributing
 
@@ -445,6 +486,7 @@ This is a personal project documentation repository, but contributions, suggesti
 - Ecowit WS80 integration experiences with rtl_433 and SignalK
 - Alternative rudder feedback sensor recommendations
 - PID tuning strategies for different sea states
+- USB GPS receiver recommendations for marine use
 
 Please open an issue for discussion before submitting pull requests.
 
@@ -472,6 +514,7 @@ Please open an issue for discussion before submitting pull requests.
 - [DIY Marine Autopilot with IBT-2](https://forum.openmarine.net/showthread.php?tid=3385)
 - [Arduino IBT-2 Motor Control Examples](https://www.hessmer.org/blog/2013/12/28/ibt-2-h-bridge-with-arduino/)
 - [rtl_433 Weather Sensor Decoding](https://github.com/merbanan/rtl_433)
+- [Pypilot GPS Configuration](https://forum.openmarine.net/showthread.php?tid=5167)
 
 ## License
 
