@@ -4,7 +4,7 @@ Open-source autopilot retrofit for 36ft yacht *Arion* using pypilot with hydraul
 
 ## Project Overview
 
-This project documents the installation and configuration of a pypilot-based autopilot system on *Arion*, a 36-foot sailboat with existing hydraulic steering. The installation **replaces a non-functional TQM AP8 autopilot** (removing all legacy solenoid electronics and control circuitry) with a modern system using an **IBT-2 motor controller with dual BTS7960B H-bridge chips** driving the existing **Octopus Model 1012 hydraulic pump** directly.
+This project documents the installation and configuration of a pypilot-based autopilot system on *Arion*, a 36-foot sailboat with existing hydraulic steering. The installation **replaces a non-functional TQM AP8 autopilot** (removing the relay-based H-bridge control system) with a modern solid-state system using an **IBT-2 motor controller with dual BTS7960B H-bridge chips** driving the existing **Octopus Model 1012 hydraulic pump** directly.
 
 The system uses a dual-Raspberry Pi architecture combining reliability and functionality:
 - **Tinypilot** on Raspberry Pi Zero W for dedicated autopilot control
@@ -26,15 +26,15 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
   - Dual current sense outputs (R_IS, L_IS)
   - Integrated thermal protection
 - **Hydraulic Pump**: Octopus Model 1012 (12V DC, retained from original installation)
-- **Motor Connection**: Direct PWM control from IBT-2 to hydraulic pump motor (no solenoids)
+- **Motor Connection**: Direct PWM control from IBT-2 to hydraulic pump motor (no relays)
 - **GPS Receiver**: USB GPS (NMEA 0183) connected directly to Pi Zero W for standalone GPS mode operation
 - **Rudder Feedback**: Analog or digital rudder position sensor
 - **Power**: 12V DC ship's power with 30A inline fuse protection
 
 **Legacy Hardware Removed:**
 - TQM AP8 autopilot control unit
-- 4x solenoid valves (used as H-bridge for pump motor polarity control)
-- Associated solenoid control wiring and relay circuits
+- 4x 12V automotive relays (30-40A rated, used as H-bridge for pump motor polarity switching)
+- Relay control wiring and driver circuits
 
 #### Navigation System (Lysmarine)
 - **Computer**: Raspberry Pi 4 (8GB RAM)
@@ -106,7 +106,7 @@ Pixel 2 Phone Hotspot (192.168.43.1)
               ├── Rudder feedback sensor (analog/digital)
               └── Motor controller (GPIO PWM)
                    |
-                   └── IBT-2 H-Bridge (Direct PWM Control)
+                   └── IBT-2 H-Bridge (Solid-State PWM Control)
                         ├── RPWM (Right PWM) ← GPIO PWM
                         ├── LPWM (Left PWM) ← GPIO PWM
                         ├── R_EN/L_EN (Enable) ← GPIO Digital
@@ -120,7 +120,7 @@ Pixel 2 Phone Hotspot (192.168.43.1)
 
 ### IBT-2 Motor Controller Connection
 
-The IBT-2 provides **direct bidirectional PWM control** of the hydraulic pump motor without intermediate solenoids. The legacy TQM AP8 used 4 solenoids as an H-bridge to control pump motor polarity (on/off only). The IBT-2 replaces this with **proportional PWM control** for smooth, efficient steering.
+The IBT-2 provides **direct bidirectional PWM control** of the hydraulic pump motor using solid-state MOSFET switching. The legacy TQM AP8 used **4x 12V automotive relays wired as an H-bridge** to control pump motor polarity (on/off switching only). The IBT-2 replaces this entire relay-based circuit with **solid-state proportional PWM control** for smooth, efficient steering.
 
 **Pi Zero GPIO to IBT-2 Wiring:**
 ```
@@ -148,6 +148,50 @@ B- (power in) →  12V ground/negative bus
 - **Reverse (port turn)**: LPWM=PWM duty cycle (0-100%), RPWM=0%, both EN=HIGH
 - **Brake/Stop**: Both RPWM=0% and LPWM=0%, both EN=HIGH
 - **Emergency stop**: Both EN=LOW (disables all outputs)
+
+### Legacy Relay H-Bridge (Being Replaced)
+
+The TQM AP8 used a classic **4-relay H-bridge configuration** for motor polarity reversal:
+
+```
+        +12V ────┬────────────┬────
+                 │            │
+              Relay1       Relay3
+              (SPDT)       (SPDT)
+              30A NO       30A NO
+                 │            │
+                 ├─── M+ ─────┤
+                 │  (Motor)   │
+                 ├─── M- ─────┤
+                 │            │
+              Relay2       Relay4
+              (SPDT)       (SPDT)
+              30A NO       30A NO
+                 │            │
+        GND ─────┴────────────┴────
+
+Forward/Starboard: Relay1 + Relay4 energized (M+ to +12V, M- to GND)
+Reverse/Port:      Relay2 + Relay3 energized (M- to +12V, M+ to GND)
+Stop:              All relays de-energized (motor floating)
+```
+
+**Limitations of Relay-Based System:**
+- **Bang-bang control only**: On/off switching with no proportional control
+- **Mechanical wear**: Relay contacts degrade from arcing (typical lifespan 100,000-1M operations)
+- **Slow response**: ~10-20ms switching time per relay activation
+- **Electrical noise**: Contact arcing generates RF interference
+- **Power consumption**: Relay coils draw ~100-200mA each when energized
+- **Contact welding risk**: High inrush current can weld relay contacts closed
+
+**Advantages of IBT-2 Solid-State Replacement:**
+- **Proportional PWM control**: Variable speed control (0-100% duty cycle)
+- **Unlimited lifespan**: No mechanical wear on MOSFET switching
+- **Ultra-fast response**: <1µs switching time (20,000x faster than relays)
+- **Clean switching**: No electrical arcing or RF interference
+- **Lower standby power**: MOSFETs draw minimal gate current
+- **Current sensing**: Real-time motor current monitoring via R_IS/L_IS outputs
+- **Thermal protection**: Automatic shutdown on over-temperature
+- **Smooth operation**: Variable PWM eliminates jerky bang-bang steering
 
 ### Data Flow
 
@@ -177,7 +221,7 @@ B- (power in) →  12V ground/negative bus
 3. Pypilot reads IMU (compass heading, heel, pitch) at 10-20Hz
 4. PID controller calculates steering correction
 5. PWM command sent via GPIO to IBT-2 controller
-6. IBT-2 drives hydraulic pump motor bidirectionally
+6. IBT-2 drives hydraulic pump motor bidirectionally with proportional control
 7. Hydraulic pressure moves steering ram
 8. Rudder feedback sensor reports position
 9. Pypilot adjusts PWM duty cycle to reach target rudder angle
@@ -197,8 +241,9 @@ B- (power in) →  12V ground/negative bus
 - **RAM-based OS**: Tinypilot runs entirely from RAM after boot—safe power disconnection, no SD card corruption
 - **Dual-System Redundancy**: Navigation computer failure doesn't affect autopilot operation
 - **Minimal Power**: Pi Zero + USB GPS consumes ~3W for extended offshore passages
-- **No Solenoid Complexity**: Direct motor control eliminates solenoid failure modes and electrical relay issues
-- **Proportional Control**: PWM allows smooth, proportional steering (not just on/off bang-bang)
+- **No Relay Wear**: Solid-state IBT-2 eliminates relay contact degradation and mechanical failure modes
+- **Proportional Control**: PWM allows smooth, proportional steering response (not just on/off bang-bang)
+- **Unlimited Switching**: MOSFETs have no wear limit unlike relay contacts (millions of operations)
 
 ### Safety
 - **Network Independence**: Core steering function never depends on WiFi connectivity
@@ -208,6 +253,7 @@ B- (power in) →  12V ground/negative bus
 - **Manual Override**: Hydraulic steering allows instant manual override at helm
 - **Fuse Protection**: 30A inline fuse protects against electrical faults and short circuits
 - **Emergency Shutdown**: Software can disable IBT-2 via EN pins for immediate motor stop
+- **No Contact Arcing**: Solid-state switching eliminates electrical arcing fire risk
 
 ### Flexibility
 - **Multiple Control Interfaces**:
@@ -219,17 +265,20 @@ B- (power in) →  12V ground/negative bus
 - **Multiple Heading Modes**: Compass, GPS track, Wind angle, True wind, Route following (NAV)
 - **Tack/Jibe Commands**: Automated sailing maneuvers with configurable angles
 - **Custom Python Scripts**: Full Python API for advanced automation and integration
-- **Smooth Proportional Control**: PWM duty cycle control for gentle, efficient steering corrections
+- **Smooth Proportional Control**: Variable PWM duty cycle for gentle, efficient steering corrections
+- **Adjustable Response**: PWM frequency and duty cycle tunable for optimal pump performance
 
 ## Installation Overview
 
 ### Phase 1: Hardware Removal & Preparation
 1. **Remove legacy TQM AP8 system**:
-   - Disconnect all solenoid control wiring and power connections
-   - Remove 4x solenoid valves from boat (they were used as H-bridge for motor polarity switching)
-   - Remove TQM AP8 control unit and associated electronics
-   - Clean up wiring harnesses and mounting locations
+   - Disconnect power to TQM AP8 control unit
+   - Remove 4x 12V automotive relays from relay H-bridge circuit
+   - Disconnect relay control wiring from TQM AP8
+   - Remove TQM AP8 control unit and mounting hardware
+   - Clean up wiring harnesses and document wire colors/connections for reference
 2. **Verify Octopus 1012 hydraulic pump**:
+   - Identify pump motor positive and negative terminals (formerly connected to relay H-bridge)
    - Test pump motor operates on 12V DC (direct connection test with polarity reversal)
    - Measure pump current draw under load (typically 15-25A)
    - Check hydraulic fluid level and condition
@@ -245,6 +294,7 @@ B- (power in) →  12V ground/negative bus
    - Use 12AWG or heavier wire for motor power connections
    - Keep motor cables as short as practical (minimize voltage drop)
    - Connect Motor+/Motor- to pump terminals (polarity determines initial direction)
+   - Note: These connect directly where the relay H-bridge outputs were connected
 6. **Wire IBT-2 power supply**:
    - Connect B+ to 12V positive bus via 30A inline fuse
    - Connect B- to 12V negative/ground bus
@@ -274,6 +324,7 @@ B- (power in) →  12V ground/negative bus
    - Command small starboard turn → verify rudder moves starboard
    - Command small port turn → verify rudder moves port
    - If reversed, swap RPWM/LPWM pins or invert in software
+   - Note: Response should be much faster and smoother than old relay system
 7. Calibrate IMU (compass, accelerometer, alignment)
 8. Configure rudder feedback sensor range and calibration
 9. Tune PID parameters for hydraulic system response
@@ -307,16 +358,20 @@ B- (power in) →  12V ground/negative bus
    - Check current sense readings match expectations
    - Test emergency stop functionality
    - Verify GPS acquisition and position reporting
+   - Compare response time vs old relay-based system (should be noticeably faster and smoother)
 2. **Motoring trials**: 
    - Test compass mode stability in straight-line motoring
    - Test GPS track mode following straight line waypoint
    - Verify manual override functions properly
    - Tune PID gains for smooth response without oscillation
+   - Adjust PWM frequency if motor noise is excessive
+   - Compare power consumption vs relay system (should be similar or lower)
 3. **Sailing trials**: 
    - Test in various sea states and wind conditions
    - Tune PID gains for heel compensation
    - Verify power consumption acceptable for long passages
    - Test GPS track mode following curved routes
+   - Evaluate smoothness of steering vs old bang-bang relay system
 4. **Advanced mode testing**: 
    - GPS track following accuracy over multiple waypoints
    - Wind mode performance (after sensor installation)
@@ -331,7 +386,7 @@ B- (power in) →  12V ground/negative bus
 - `/docs/` - Detailed installation guides, wiring diagrams, and IBT-2 setup
 - `/config/` - Sample pypilot configuration files for IBT-2 motor controller
 - `/scripts/` - Python utilities for motor testing, current monitoring, and diagnostics
-- `/hardware/` - Hardware specifications, IBT-2 datasheet, Ecowit WS80 info, component datasheets
+- `/hardware/` - Hardware specifications, IBT-2 datasheet, Ecowit WS80 info, component datasheets, legacy relay H-bridge photos
 - `/calibration/` - Calibration procedures, PID tuning guides, and reference data
 - `/wind_integration/` - rtl_433 configuration, SignalK integration, WS80 setup (future)
 
@@ -433,18 +488,21 @@ Network connectivity is **optional** for Wind mode and NAV route following only.
 ## Performance Characteristics
 
 - **Heading Hold Accuracy**: ±2-5° (dependent on sea state, heel angle, and PID tuning)
-- **Rudder Response Time**: ~1-3 seconds (hydraulic system and motor controller dependent)
+- **Rudder Response Time**: ~0.5-2 seconds (much faster than relay system, limited by hydraulic flow)
+- **Motor Switching Speed**: <1µs (solid-state) vs ~10-20ms (relay-based legacy system)
 - **Power Consumption**: 
   - Pi Zero: ~2.4W (200mA @ 12V)
   - USB GPS: ~0.6W (50mA @ 12V via USB)
   - Pi 4: ~7.5W (625mA @ 12V) 
   - Hydraulic pump (active steering): 180-300W (15-25A @ 12V)
   - Hydraulic pump (holding course): ~60-120W intermittent
+  - IBT-2 standby: <1W (vs ~2-4W for relay coils in legacy system)
 - **IMU Update Rate**: 10-20 Hz
 - **GPS Update Rate**: 1-10 Hz (typical 1Hz)
 - **Control Loop Frequency**: 10 Hz
 - **PWM Frequency**: 10-20 kHz (configurable, affects motor noise and efficiency)
-- **Maximum Rudder Slew Rate**: 10-20°/sec (configurable, limited by hydraulic flow)
+- **PWM Resolution**: 8-16 bit (256-65536 discrete levels for smooth proportional control)
+- **Maximum Rudder Slew Rate**: 10-20°/sec (configurable, limited by hydraulic flow rate)
 
 ## Bill of Materials (BOM)
 
@@ -475,6 +533,12 @@ Network connectivity is **optional** for Wind mode and NAV route following only.
 - Google Pixel 2 phone (already owned) - $A0 AUD
 - Mobile data plan (optional for weather) - varies
 
+### Legacy Hardware Removed (For Reference)
+- TQM AP8 control unit - removed
+- 4x 12V automotive relays (30-40A SPDT) - removed
+- Relay control wiring and driver circuits - removed
+- Approximate legacy component value: ~$A50-100 AUD (recyclable/resellable)
+
 **Total Project Cost**: ~$A239-397 AUD (core autopilot only, excluding navigation system and wind sensor)
 
 **Total with Future Wind Integration**: ~$A456-712 AUD
@@ -487,6 +551,8 @@ This is a personal project documentation repository, but contributions, suggesti
 - Alternative rudder feedback sensor recommendations
 - PID tuning strategies for different sea states
 - USB GPS receiver recommendations for marine use
+- Comparisons of solid-state vs relay-based autopilot performance
+- Experiences upgrading from TQM AP8 or similar relay-based systems
 
 Please open an issue for discussion before submitting pull requests.
 
