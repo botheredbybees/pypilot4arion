@@ -2,530 +2,160 @@
 
 ## System Overview
 
-This document describes the 24V lead-acid battery system with MPPT solar charging for YachtArion, providing power for both propulsion (24V trolling motor) and house systems (12V via buck converter).
+This document describes the **Hybrid 24V/12V Power System** for YachtArion. The system transitions the primary House and Propulsion banks to **24V** for efficiency, while integrating legacy **12V** components (Yanmar engine, alternator, wind generator) via a smart DC-DC charging bridge.
+
+### System Architecture
+
+1.  **Primary Energy Bank (24V)**:
+    *   **Source 1**: 550W Solar Array (MPPT Charging).
+    *   **Source 2**: Engine/Wind charging from 12V side via DC-DC Charger.
+    *   **Loads**: Electric Propulsion (Trolling Motor), House 12V Buck Converter.
+
+2.  **Legacy 12V System (Engine & Wind)**:
+    *   **Battery**: 12V Start Battery (Isolated).
+    *   **Sources**: 12V Alternator (Yanmar), 12V Wind Generator (Rutland).
+    *   **Loads**: Engine Starter, Bilge pumps (optional direct 12V safety).
+
+3.  **The Bridge (12V → 24V)**:
+    *   A **12V-to-24V DC-DC Battery Charger** (e.g., Victron Orion-Tr Smart).
+    *   automatically charges the 24V House Bank whenever the Engine or Wind Generator raises the 12V voltage above ~13.5V (engine running).
 
 ### System Components
 
-- **Solar Array**: 2 × JA Solar JAP60S01-275/SC (275W each, 550W total)
-- **Battery Bank**: 2 × 12V lead-acid batteries in series (24V nominal, 200Ah typical)
-- **Charge Controller**: 60A MPPT auto-detect (12V/24V/36V/48V capable)
-- **DC-DC Converter**: Golf-cart style 24V to 12V buck converter (18-58V input, 12V 20A output, 240W)
-- **Propulsion**: 24V trolling motor (90 lb thrust, ~1152W at full power)
-- **House Loads**: 12V lighting, electronics, communications via buck converter
+-   **Solar Array**: 2 × JA Solar JAP60S01-275/SC (275W each, 550W total)
+-   **24V House/Prop Bank**: 2 × 12V lead-acid batteries in series (200Ah @ 24V)
+-   **12V Start Battery**: 1 × 12V Cranking Battery (Standard marine)
+-   **Solar Controller**: 60A MPPT (Charges 24V Bank)
+-   **DC-DC Bridge**: 12V Input → 24V Output, ~18A-30A Charger (Charges 24V Bank from Alternator/Wind)
+-   **House Buck**: 24V → 12V Converter (Powers instruments/lights)
+-   **Propulsion**: 24V Trolling Motor (90 lb thrust)
 
 ### Voltage & Power Specifications
 
 **Solar Panels (per unit at STC)**:
-- Maximum Power: 275W
-- Voltage at MPP (Vmp): 31.34V
-- Current at MPP (Imp): 8.77A
-- Open Circuit Voltage (Voc): 38.38V
-- Short Circuit Current (Isc): 9.29A
+-   Maximum Power: 275W
+-   Voltage at MPP (Vmp): 31.34V
+-   Current at MPP (Imp): 8.77A
+-   Open Circuit Voltage (Voc): 38.38V
 
-**Array Configuration (Parallel)**:
-- Total Array Voltage at MPP: ~31.3V
-- Total Array Current at MPP: ~17.5A (2 × 8.77A)
-- Total Array Power: ~550W
-
-**Battery Bank Voltage Setpoints** (lead-acid, temperature compensated):
-- Bulk/Absorption Charge: 28.8V (14.4V per 12V cell)
-- Float Charge: 27.2V (13.6V per 12V cell)
-- Low Voltage Disconnect (LVD): 22.2-23.0V (configurable)
-- Temperature Compensation: -3mV/°C per 2V cell
-
-**Trolling Motor** (example: 90 lb electric):
-- Rated Voltage: 24V
-- Rated Power: 1152W (full thrust)
-- Typical Current: 48A @ 24V (full power)
-- Run Time from 200Ah Bank @ 50% DoD: 2-3 hours (accounting for voltage sag and Peukert effect)
+**Battery Banks**:
+| Bank | Nominal | Config | Charging Sources |
+| :--- | :--- | :--- | :--- |
+| **House / Prop** | 24V | 2×12V Series | Solar (MPPT), Engine/Wind (via DC-DC) |
+| **Engine Start** | 12V | 1×12V Single | Alternator, Wind Gen |
 
 ## Electrical System Architecture
 
-### Block Diagram
+### Hybrid Block Diagram
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     YACHT ARION 24V SYSTEM                   │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph "24V PRIMARY SYSTEM (House & Propulsion)"
+        Solar[PV Array 550W] -->|MPPT Regulator| Bus24[24V Bus Bar]
+        Bus24 -->|60A Breaker| Bat24[24V House Battery Bank]
+        Bus24 -->|60A Breaker| Motor[24V Trolling Motor]
+        Bus24 -->|Fuse| Buck[24V->12V Buck Converter]
+        Buck --> FuseBox[12V House Fuse Panel]
+        FuseBox --> Lights[Lights & Inst]
+        FuseBox --> Pi[Autopilots]
+    end
 
-                    ┌─────────────────────┐
-                    │  2× JA Solar 275W   │
-                    │   Panels (Parallel) │
-                    │  Vmp ≈ 31.3V, P≈550W│
-                    └──────────┬──────────┘
-                               │
-                               │ MC4 connectors
-                               │ 10 AWG tinned marine cable
-                               │ 6mm² / PV Isolator breaker
-                               ▼
-                    ┌──────────────────────┐
-                    │  60A MPPT Controller │
-                    │   (12/24/36/48V)    │
-                    │  AMPT/Victron/etc.  │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────┴──────────┐
-                    │  60A Battery Breaker │
-                    │   Heavy cabling      │
-                    │   ≥16mm² / 6AWG     │
-                    └──────────┬──────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-        ┌──────────┐    ┌──────────┐    ┌──────────────┐
-        │  24V     │    │  24V     │    │ 12V Buck     │
-        │ Battery  │    │ Trolling │    │ Converter    │
-        │  Bank    │    │  Motor   │    │ (18-58V→12V) │
-        │200Ah×24V │    │  Circuit │    │   240W       │
-        └────┬─────┘    └──────────┘    └───────┬──────┘
-             │                                   │
-             │         12V DC Distribution       │
-             └───────────────────┬───────────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │                         │
-                    ▼                         ▼
-            ┌──────────────┐        ┌──────────────────┐
-            │  12V Fused   │        │   Autopilot &    │
-            │  House Panel │        │  Navigation (Pis)│
-            │  (Lights,    │        │  (Buck Conv #1)  │
-            │   Radio,etc) │        │                  │
-            └──────────────┘        └──────────────────┘
+    subgraph "12V LEGACY SYSTEM (Engine & Wind)"
+        Yanmar[Yanmar Diesel] -->|Belt| Alt[12V Alternator]
+        Wind[Rutland Wind Gen] -->|Regulator| Bat12[12V Start Battery]
+        Alt --> Bat12
+        Start[Starter Motor] -->|Key Switch| Bat12
+    end
+
+    subgraph "THE BRIDGE"
+        Bat12 -->|Fuse| DCDC[12V -> 24V DC-DC Charger]
+        DCDC -->|Fuse| Bus24
+    end
 ```
 
-### Single-Line Wiring Diagram (Text)
-
-```
-PV Array (2×275W)
-│
-├─ MC4 Y-connector (parallel)
-│
-├─ PV+ (6mm² red) ─→ PV Isolator Breaker (20A)
-│                      │
-│                      ├─ MPPT Controller (PV+)
-│
-└─ PV- (6mm² black) ──→ MPPT Controller (PV-)
-
-
-24V Battery Bank
-│
-├─ Batt1- (12V) ───→ Batt2- (12V)
-│                      [Series connection]
-└─ Batt2+ (12V) ───→ Bank+ (24V nominal)
-
-From MPPT Batt+ output:
-│
-├─ 60A Battery Breaker (16mm² / 6AWG red)
-│  │
-│  ├─ 24V Trolling Motor Circuit
-│  │  ├─ 60-70A Motor Breaker → Motor + terminal
-│  │  └─ Heavy cable (≥10mm²) back to Bank-
-│  │
-│  ├─ 12V Buck Converter Input (25A fuse)
-│  │  ├─ Input: 24V+ and GND
-│  │  └─ Output: 12V + and 12V - to house panel
-│  │
-│  └─ Other 24V Loads (if any)
-│     └─ Via individual fused branches
-
-From MPPT Batt- output:
-│
-├─ Main Battery GND bus (16mm² / 6AWG black)
-│  │
-│  ├─ DC negative common point
-│  ├─ Hull bonding (single point, ABYC E-11)
-│  └─ All return paths
-
-
-24V DC Negative Bus / Single-Point Ground
-│
-├─ Battery Bank negative
-├─ Motor return
-├─ Buck converter return
-├─ MPPT controller ground
-└─ Hull bonding point (one location only)
-```
-
-## Charge Controller Configuration
-
-### MPPT Controller Selection
-
-**Recommended Specifications**:
-- **Voltage Capability**: 12V / 24V / 36V / 48V auto-detect (or fixed 24V)
-- **Charge Current**: 60A minimum
-- **PV Input**: ≥150V Voc rating
-- **Temperature Sensor**: Built-in or remote probe compatible
-- **Display/Remote**: Bluetooth or WiFi monitoring (optional but recommended)
-
-**Example Models**:
-- Amptron AT-SOLCHR-AM4860 (60A, 12/24/36/48V auto-detect)
-- Victron SmartSolar 60/48 (60A, 48V system, requires de-rating for 24V)
-- OutBack MPPT (60A models with datalogger capability)
-- Generic Chinese 60A MPPT (≥150V Voc, 24V compatible)
-
-### Configuration Parameters (24V Lead-Acid Bank)
-
-**Charge Setpoints** (temperature-compensated):
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Bulk/Absorption Voltage | 28.8V | 14.4V per 12V cell; typical for lead-acid |
-| Absorption Time | 1-2 hours | Configurable; default usually 1-2h |
-| Float Voltage | 27.2V | 13.6V per 12V cell; long-term maintenance |
-| Float Current Threshold | 2-5% of rated | Auto-transition when current drops |
-| Equalization (AGM only) | Not recommended | Flooded lead-acid may support every 3-6 months |
-| LVD (Load Disconnect) | 22.2V - 23.0V | Optional; protects battery from over-discharge |
-| Temperature Compensation | -3mV/°C per 2V cell | Adjust setpoints for ambient temp |
-
-**Typical Daily Cycle** (sunny day):
-1. **Morning (dawn)**: Bulk charge at 28.8V; controller maximum current (~19A at MPP)
-2. **Mid-day (peak sun)**: Array voltage rises slightly; charge current decreases as battery approaches bulk voltage
-3. **Absorption**: Once bulk voltage reached, current tapers over 1-2 hours
-4. **Float**: Battery transitions to 27.2V float for rest-of-day trickle charging
-5. **Night**: No charging; loads discharge from battery
-
-### MPPT Efficiency & Power Flow
-
-**At Nominal Operating Point**:
-
-- **Array Output**: Vmp ≈ 31.3V, Imp ≈ 17.5A, Pmp ≈ 548W
-- **Battery Voltage (bulk)**: 28.8V
-- **MPPT Duty Cycle** (buck regulator): ~92% (28.8V / 31.3V)
-- **Expected Charge Current**: $I_{bat} = \frac{P_{pv}}{V_{bat}} \times \eta = \frac{548}{28.8} \times 0.95 \approx 18A$
-- **Loss (5%)**: ~27W → heat dissipation in MPPT (cooling fan may activate if ambient >40°C)
-
-**Efficiency Over Operating Range**:
-- Peak efficiency (~90-95%): Array voltage 5-10% above battery voltage (buck mode)
-- Reduced efficiency (<85%): Array voltage <<battery voltage (excessive duty cycle) or >>battery voltage (boost mode, not typical for this array)
-- Best performance: Panels unshaded, MPPT in "sweet spot" of 30-35V PV input
-
-## Battery Bank Design
-
-### Battery Selection
-
-**Lead-Acid Type Options**:
-1. **Flooded (wet) lead-acid**: Lower cost, requires venting & maintenance, good for stationary marine use
-2. **AGM (Absorbed Glass Mat)**: Sealed, lower maintenance, slightly higher cost, good vibration tolerance
-3. **Gel**: Very low maintenance, highest cost, slower charge acceptance
-
-**Recommended for YachtArion**: AGM or quality flooded lead-acid (Odyssey, Relion, or marine-grade equivalent)
-
-**Capacity Examples**:
-- **100Ah bank** (2×12V 100Ah in series → 24V 100Ah): ~2.4kWh total energy; ~1.2kWh usable @ 50% DoD
-- **200Ah bank** (2×12V 200Ah in series → 24V 200Ah): ~4.8kWh total energy; ~2.4kWh usable @ 50% DoD
-
-### Series Connection (Two 12V Batteries)
-
-```
-┌─ 12V Battery #1 ─┐
-│  Batt1+ (red)    │
-│  Batt1- (black)  │
-└──────────────────┘
-         │
-         │ Interconnect cable (≥10mm² / 8AWG)
-         │ Heavy-duty lug terminals, crimped & soldered
-         │
-┌─ 12V Battery #2 ─┐
-│  Batt2+ (red)    │
-│  Batt2- (black)  │
-└──────────────────┘
-         │
-         │ Bank+ = Batt2+ (positive terminal of upper cell)
-         │ Bank- = Batt1- (negative terminal of lower cell)
-         │
-    ┌────┴─────┐
-    │  24V Bus  │
-    └───────────┘
-```
-
-**Critical Points**:
-- Never tap loads from mid-point (Batt1+ to Batt2-)—this causes imbalance and accelerated degradation
-- Use heavy-gauge interconnect cable with crimp lugs (no exposed copper, risk of arc flash)
-- Ensure terminal connections are clean and tight (minimum 0.2V contact resistance)
-- Use marine-grade battery box with integrated straps & venting for flooded batteries
-- Install temperature sensor on one battery for MPPT compensation
-
-### Battery Monitoring
-
-**Recommended Instruments**:
-1. **Shunt & Monitor**: 500A shunt with integrating monitor (displays Ah drawn, SoC %, voltage, current)
-   - Example: Victron SmartShunt 500A, EPEVER EM5, or equivalent
-   - Measures actual bank voltage and discharge current
-2. **Manual Hydrometer** (if flooded): Monthly check of specific gravity per cell
-3. **Visual Inspection**: Weekly check for corrosion, leaks, or loose connections
-4. **Temperature Probe**: Part of MPPT or dedicated thermometer
-
-**Expected Performance**:
-- **Charge time** (550W array): ~8-10 hours from 50% to 95% SoC on sunny day (accounting for voltage rise and absorption phase)
-- **Cycle life** (50% DoD, flooded lead-acid): 800-1000 cycles typical (~2-3 years marine use)
-- **Self-discharge**: ~1-2% per month (flooded), <1% (AGM) at float voltage
-
-## 24V Propulsion System (Trolling Motor)
-
-### Motor Circuit Design
-
-**24V Trolling Motor Specifications** (example: 90 lb thrust):
-- Rated Voltage: 24V DC
-- Rated Power: 1152W (at full thrust)
-- Rated Current: 48A @ 24V
-- Peak Thrust: 90 lbf (~400N)
-- Duty Cycle: Intermittent (not continuous full power)
-
-### Motor Wiring & Protection
-
-**Cable Sizing** (for 50A continuous, <3% voltage drop @ 10m run):
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Conductor Gauge | ≥10mm² (8 AWG) | Tinned marine cable for salt water |
-| Positive Lead | 10mm² red | From battery + via breaker to motor + |
-| Negative Lead | 10mm² black | From motor - back to battery - (common bus) |
-| Fuse/Breaker | 60-70A thermal-magnetic | Rating: 1.25-1.5× max motor current |
-| Breaker Type | Marine-grade DC breaker | Suitable for 24V DC; preferred over fuse for reliability |
-| Cable Length | Minimize | Shorter run = less voltage drop |
-| Connections | Tinned lug terminals | Crimped & soldered; no bare copper |
-| Conduit | Marine-grade loom | Protect from chafe, UV, salt spray |
-
-**Breaker Selection**:
-- **Thermal-Magnetic DC Breaker** (e.g., Blue Sea Systems, AMAG Marine):
-  - Instant trip at ~2-3× rated current (15-20A for 60A breaker)
-  - Thermal trip at ~1.1× rated current (66A for 60A breaker) over ~30 sec
-  - Rated for 24V DC inductive loads
-  - Preferrable to fuses for motor circuits (fuse cannot re-trip)
-
-**Example 60A Breaker Specification**:
-- Frame: Toggle or push-button
-- Voltage Rating: 24V DC minimum (or 48V DC for marine dual-voltage)
-- Current Rating: 60A
-- Breaking Capacity: ≥1000A
-- Trip Type: Thermal-magnetic (bi-metal + solenoid)
-- Operating Temperature: -20°C to +60°C
-
-### Motor Operation & Run-Time Calculation
-
-**Power Delivery at Various Thrust Levels**:
-
-| Thrust (%) | Power (W) | Current (A) | Run-Time* (hours) |
-|------------|-----------|------------|-------------------|
-| 25% (light cruise) | 288 | 12 | ~16h |
-| 50% (medium) | 576 | 24 | ~8h |
-| 75% (high) | 864 | 36 | ~5.3h |
-| 100% (full) | 1152 | 48 | ~4.1h |
-
-*Run-time from 24V 200Ah bank @ 50% DoD, accounting for Peukert effect and voltage sag.
-
-**Real-World Considerations**:
-- At 48A draw, battery voltage sags from 24V → ~22-23V (heavy load)
-- Peukert effect reduces usable Ah (faster discharge = lower capacity)
-- Actual run-time is 60-70% of Ah/Current estimate
-- **Practical Run-Time Estimate**: At full power, expect 2-3 hours continuous from full 200Ah bank
-
-### Motor Control & Direction
-
-**Reversible Trolling Motor Circuit**:
-- Typically includes integral forward/reverse control (manual lever or foot pedal)
-- Most 24V motors are 3-wire: 24V+, 24V-, and PWM speed control
-- Speed control via PWM signal from hand throttle or foot pedal
-- No additional relay/contactor needed (all logic inside motor controller)
-
-**Optional External Motor Contactor** (if desired for remote monitoring):
-- 24V DC contactor rated for motor inrush (e.g. 60A continuous, 200A inrush)
-- Allows cut-off from navigation station or autopilot
-- Recommended practice: Use hard-wired breaker for instant safety cutoff, add soft contactor for remote control
-
-## 24V House System (Lights, Radio, Instruments)
-
-### 12V Buck Converter Integration
-
-The existing 24V-to-12V buck converter provides regulated 12V for house loads:
-
-**Converter Specifications** (from earlier documentation):
-- Input Voltage: 18-58V DC (operates from 24V battery directly)
-- Output Voltage: 12V DC regulated ±5%
-- Output Current: 20A maximum continuous
-- Output Power: 240W nominal
-- Efficiency: 90-95% at typical loads
-
-**Connection to 24V Bank**:
-
-```
-24V Battery Bank
-      │
-      ├─ [25A Fuse] ─── Golf Cart Buck Converter Input (24V+, GND)
-      │                         │
-      │                    [Internal buck regulation]
-      │                         │
-      │                  Output: 12V ± 0.3V
-      │
-      └─ [Common Ground] ─────┬──── 12V Negative Bus
-                              │
-                         12V Fuse Panel
-                              │
-                    ┌─────────┼─────────┐
-                    │         │         │
-               [Lighting] [Radio] [Instruments]
-                   (5A)      (10A)      (5A)
-```
-
-**House Circuit Breakers** (12V side):
-
-| Circuit | Breaker Size | Devices |
-|---------|--------------|---------|
-| Lighting | 5A | Navigation lights, cabin lights, deck lights |
-| Radio / Comms | 10A | VHF radio, SSB transceiver, AIS receiver |
-| Instruments | 5A | Chart plotter, compass display, depth sounder |
-| Autopilot Pi 4 | 3A | Lysmarine system (powers via buck converter) |
-| Autopilot Pi Zero | 1A | Tinypilot (powers via separate buck converter #1) |
-| **Total Max** | **24A** | (But 20A buck converter limit = practical max 20A) |
-
-**12V Load Budget**:
-- Normal cruising (all systems active): ~15A (180W)
-- Peak draw (full lights + charging): ~20A (240W)
-- Idle (autopilot + minimal instruments): ~3A (36W)
-
-**Note**: Pi 4 and Pi Zero are powered from separate 5V buck converters (as per main README), not from this 24V-to-12V converter. The 24V→12V converter is dedicated to house loads only.
-
-## Complete Equipment List (Bill of Materials)
-
-### Solar Array & Mounting
-
-| Item | Qty | Spec | Price (AUD) | Source |
-|------|-----|------|------------|--------|
-| JA Solar JAP60S01-275/SC | 2 | 275W polycrystalline, 31.34V Vmp | $200-250/ea | LocalSolar, SupplyInstalled |
-| Solar panel mounting kit | 1 | Stainless steel rails + clamps | $150-250 | Marine supplier |
-| MC4 connectors (pair) | 2 sets | IP67 rated, 30A | $20-30/set | Electrical supplier |
-| Breaker gland / penetration | 2 | Deck gland for cable entry | $15-20/ea | Marine hardware |
-| PV isolator switch | 1 | 20A DC, manual or automatic | $30-50 | Electrical supplier |
-
-**Subtotal Solar & Mounting**: ~$700-950 AUD
-
-### Charge Controller & Monitoring
-
-| Item | Qty | Spec | Price (AUD) | Source |
-|------|-----|------|------------|--------|
-| MPPT Solar Charge Controller | 1 | 60A, 12/24/36/48V auto-detect | $300-600 | Amptron, Victron, PowMR |
-| Temperature sensor (optional) | 1 | For MPPT compensation | $20-40 | MPPT vendor |
-| Shunt + Battery Monitor | 1 | 500A shunt, integrating monitor | $200-400 | Victron, EPEVER |
-| Bluetooth/WiFi adapter (opt) | 1 | Remote monitoring | $50-100 | MPPT vendor |
-
-**Subtotal Charge Controller & Monitoring**: ~$570-1140 AUD
-
-### Battery Bank
-
-| Item | Qty | Spec | Price (AUD) | Source |
-|------|-----|------|------------|--------|
-| 12V lead-acid battery (AGM) | 2 | 200Ah each | $600-900/ea | SuperCheap Auto, Battery World |
-| Battery interconnect cables | 1 | ≥10mm² / 8AWG tinned, lugs | $30-50 | Marine supplier |
-| Battery box with straps | 1 | Stainless steel frame | $50-100 | Marine hardware |
-| Terminal covers / insulators | 2 | Prevent accidental shorts | $10-20 | Auto/electrical |
-| Hydrometer (if flooded) | 1 | For specific gravity checks | $10-15 | Auto parts |
-
-**Subtotal Battery Bank**: ~$1300-1995 AUD
-
-### DC Wiring & Distribution
-
-| Item | Qty | Spec | Price (AUD) | Notes |
-|------|-----|------|------------|-------|
-| Tinned marine cable (red) | 30m | 16mm² / 6AWG | $150-200 | Battery to breaker, controller output |
-| Tinned marine cable (black) | 30m | 16mm² / 6AWG | $150-200 | Ground/return runs |
-| Tinned marine cable (red) | 20m | 10mm² / 8AWG | $80-120 | Motor circuit positive |
-| Tinned marine cable (black) | 20m | 10mm² / 8AWG | $80-120 | Motor circuit return |
-| Tinned marine cable (red) | 10m | 6mm² / 10AWG | $30-50 | PV array input |
-| Tinned marine cable (black) | 10m | 6mm² / 10AWG | $30-50 | PV array ground |
-| Crimp lugs (assorted) | 100-pack | Tinned, various sizes | $20-40 | Electrical supplier |
-| Heatshrink tubing (marine) | 50m | Adhesive-lined, various diameters | $30-50 | Marine/electrical |
-| Cable ties (stainless) | 100-pack | UV-rated, stainless steel | $15-25 | Marine hardware |
-| Wire conduit (marine loom) | 30m | Corrugated, UV-resistant | $40-60 | Marine supplier |
-| Negative bus bars (tinned) | 2 | For central grounding | $20-40 | Electrical supplier |
-| Battery breaker (main) | 1 | 60A, 24V DC thermal-magnetic | $80-150 | Blue Sea, AMAG Marine |
-| PV isolator (optional) | 1 | 20A manual DC breaker | $30-50 | Electrical supplier |
-| Motor breaker | 1 | 60-70A, 24V DC thermal-magnetic | $80-150 | Blue Sea, AMAG Marine |
-| 24V to 12V buck converter | 1 | 18-58V input, 12V 20A output | $50-100 | Lithium Power, Amazon |
-| 12V fuse block | 1 | 6-8 position, 20A bus rating | $30-60 | Electrical supplier |
-| Fuses & holders | 1 lot | 5A, 10A, 15A, 25A marine ATO | $20-40 | Auto/electrical |
-
-**Subtotal DC Wiring & Distribution**: ~$1185-1910 AUD
-
-### Motor Circuit & Propulsion
-
-| Item | Qty | Spec | Price (AUD) | Source |
-|------|-----|------|------------|--------|
-| 24V trolling motor | 1 | 90 lb thrust, ~1152W | $300-600 | Striker, Minnkota |
-| Motor breaker (60-70A) | 1 | Redundant breaker in motor circuit | $80-150 | Blue Sea, AMAG |
-| Shaft coupler / propeller | 1 | Matched to motor | $50-150 | Motor vendor |
-
-**Subtotal Motor & Propulsion**: ~$430-900 AUD
-
-### Miscellaneous
-
-| Item | Qty | Spec | Price (AUD) | Source |
-|------|-----|------|------------|--------|
-| Battery tester | 1 | Voltage + load tester | $30-80 | Auto parts |
-| Multimeter | 1 | Digital, 600V DC / 20A | $20-50 | Bunnings, electrical |
-| Torque wrench | 1 | For terminal bolt tightness | $20-60 | Hardware |
-| Crimping tool | 1 | Hydraulic or ratchet | $40-150 | Electrical tools |
-| Soldering kit | 1 | For cable terminations | $30-80 | Hardware |
-| Fire extinguisher | 1 | ABC type, 1-2 kg, dry chem | $20-40 | Safety |
-| Electrical bonding strap | 1 | For hull bonding point | $15-30 | Marine hardware |
-| Penetrating oil / contact cleaner | - | WD-40, electrical contact cleaner | $15-30 | Auto/hardware |
-| Battery acid neutralizer (opt) | - | For flooded lead-acid safety | $10-20 | Auto parts |
-
-**Subtotal Miscellaneous**: ~$230-540 AUD
-
-## **TOTAL SYSTEM COST ESTIMATE**: ~$4,400 - $7,435 AUD
-
-(Excluding Pixel 2 phone, Raspberry Pis, and existing autopilot hardware)
-
-## Installation Guide Summary
-
-The full installation guide includes 8 phases:
-
-1. **Planning & Site Survey** - Panel location, battery placement, controller location
-2. **Solar Panel Installation** - Mounting, electrical connections, cable routing
-3. **Battery Bank Assembly** - Series configuration, box installation, DC wiring
-4. **Charge Controller Installation** - Physical mounting, electrical connections, configuration parameters
-5. **24V Motor Circuit** - Motor mounting, cable routing, breaker installation, control integration
-6. **12V House System** - Buck converter connection, fuse panel installation, circuit wiring
-7. **Safety & Compliance** - DC negative bus grounding, fire suppression, AMSA/ABYC standards
-8. **Testing & Commissioning** - Pre-power inspection, power-up sequence, load testing, monitoring
-
-## Operating Procedures
-
-- **Daily Operation**: Morning checks, midday monitoring, motor operation, evening configuration
-- **Weekly Maintenance**: Visual inspection, charge controller check, motor inspection
-- **Monthly Maintenance**: Battery specific gravity, terminal inspection, system testing
-- **Seasonal Maintenance**: Panel cleaning, angle adjustment for winter/summer, capacity testing
-
-## Troubleshooting Guide
-
-Common issues addressed:
-- Low charge current
-- Battery not reaching full charge
-- 12V buck converter output instability
-- Motor breaker tripping
-- High battery self-discharge
-
-Each includes probable causes, troubleshooting steps, and resolution procedures.
-
-## System Expansion & Future Upgrades
-
-- Additional solar capacity
-- Battery bank expansion
-- Wind generation
-- Lithium battery upgrade
-- Shore charger integration
-
-## Safety Summary
-
-10 critical safety rules covering breaker operation, grounding, cabling, fire suppression, and hydrogen venting.
+### Detailed Wiring Topology
+
+#### 1. Solar Charging (Primary)
+*   **Panels**: Wired in parallel to preserve 31V Vmp (ideal for 24V MPPT bucking).
+*   **Controller**: MPPT charges the **24V Bank** directly.
+
+#### 2. Engine & Wind Charging (Secondary)
+*   **Alternator**: Remains standard 12V. Connected directly to **12V Start Battery**.
+*   **Wind Gen**: Connected to **12V Start Battery** (via its own regulator).
+*   **Logic**:
+    1.  When Engine runs, Alternator raises Start Battery to ~14.4V.
+    2.  **DC-DC Charger** detects voltage >13.5V (engine on).
+    3.  DC-DC Charger turns ON and boosts 12V → 28.8V to charge the **24V House Bank**.
+    4.  Solar + Alternator currents combine at the 24V Bank.
+
+#### 3. Load Distribution
+*   **24V Loads**: Trolling motor connected directly to 24V Bus.
+*   **12V House Loads**: Powered by the **House Buck Converter** (24V -> 12V). This ensures house lights/radios don't dim when the engine cranks.
+*   **Emergency Starting**: A simple jumper cable or provisional switch can manually parallel the "bottom" 12V battery of the House Bank to the Starter Battery if the Starter battery dies.
+
+## Updated Equipment List
+
+### Major Components
+| Item | Spec | Purpose | Notes |
+| :--- | :--- | :--- | :--- |
+| **MPPT Controller** | 60A, 150V+ Voc | Solar Regulation | e.g. Amptron / Victron MPPT 100/50 |
+| **DC-DC Charger** | **12V Input / 24V Output**, 15-20A | Bridge Alternator to House | **[NEW]** e.g. Victron Orion-Tr Smart 12/24-18 |
+| **House Buck** | 24V In / 12V Out, 20-30A | House Power | Existing Golf-cart style Isolated converter |
+| **Batteries** | 2x 12V AGM/Flooded | House Bank | 200Ah each = 24V 200Ah Bank |
+| **Start Battery** | 1x 12V CCA Rated | Engine Start | Existing |
+
+### DC-DC Charger Specification
+The bridge device is critical. A "Victron Orion-Tr Smart 12/24-18 Isolated" is recommended:
+*   **Input**: 10-17V (12V system)
+*   **Output**: 20-30V Adjustable (Charges 24V Bank)
+*   **Current**: ~18A output (~360W transfer).
+*   **Engine Detection**: Built-in. Only draws power when alternator is spinning.
+
+If using a generic "Boost Converter":
+*   You MUST add an ignition-controlled relay on the input, otherwise it will drain the start battery when the engine is off.
+
+## Build & Installation Instructions
+
+### Phase 1: 12V Legacy Prep
+1.  **Keep it standard**: Do not modify the Yanmar alternator or starter wiring. Ensure they are reliably connected to the Start Battery.
+2.  **Wind Generator**: Connect the Rutland regulator output to the Start Battery.
+3.  **Grounding**: Ensure the Engine Block Ground is tied to the Start Battery Negative.
+
+### Phase 2: 24V House Bank Assembly
+1.  Install the 2 × 12V batteries in the battery box.
+2.  Connect Series Link (Batt 1 (+) to Batt 2 (-)) using 2AWG/35mm² cable.
+3.  **Main Ground Bus**: Connect Batt 1 (-) to the centralized negative bus.
+4.  **Main Positive Bus**: Connect Batt 2 (+) to the main 24V fuse/switch.
+
+### Phase 3: The DC-DC Bridge
+1.  **Input Side**:
+    *   Run 6AWG (16mm²) cable from Start Battery (+) to DC-DC Input (+).
+    *   Run 6AWG (16mm²) cable from Start Battery (-) to DC-DC Input (-).
+    *   *Fuse*: 60A fuse near the Start Battery.
+2.  **Output Side**:
+    *   Run 8AWG (10mm²) cable from DC-DC Output (+) to 24V House Bus (+).
+    *   Run 8AWG (10mm²) cable from DC-DC Output (-) to 24V House Bus (-).
+    *   *Fuse*: 30A fuse near the House Bus.
+3.  **Configuration**:
+    *   Set DC-DC output to "Charger Mode".
+    *   Set Bulk: 28.8V, Float: 27.2V.
+    *   Set "Engine Shutdown Detection" to Start > 13.5V, Stop < 12.8V.
+
+### Phase 4: Common Negative & Bonding
+> [!WARNING]
+> **Ground Loop Risk**: Even if using isolated converters, all battery negatives (12V Start and 24V House) generally share a common hull bond/engine ground for safety (ABYC standards).
+> However, signal noise can be an issue.
+>
+> *Recommended*: Tie the **12V Start Negative** to the **24V House Negative** at a single "System Ground Point" (usually the engine block or main busbar). This allows the Alternator return current to flow correctly if non-isolated wiring is ever used, and ensures substantial safety bonding.
+>
+> If using **Isolated** DC-DC transformers (Orion-Tr *Isolated*), you *can* keep the grounds separate, but check your Autopilot/Instrument ground paths. Often the autopilot computer touches both power ground and NMEA data ground, forcing a common ground anyway. **Plan for a common negative system.**
+
+## Start Battery Protection
+The propulsion motor draws purely from the 24V bank. You cannot accidentally flatten the start battery by motoring too long.
+*   **House Dead?**: Engine still starts (independent battery).
+*   **Start Dead?**: Use a jumper cable from House Bank "Bottom Battery" (12V) to Jump Start.
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: January 19, 2026  
-**System Designer**: botheredbybees  
-**Vessel**: SY Arion (36ft)  
-**Location**: Cygnet, Tasmania, Australia
-
-For questions or updates, please open an issue at https://github.com/botheredbybees/pypilot4arion
+**Document Version**: 2.0 (Hybrid Topology)
+**Last Updated**: January 20, 2026
