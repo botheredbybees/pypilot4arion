@@ -385,6 +385,9 @@ Stop:              All relays de-energized (motor floating)
 ## Repository Contents
 
 - `/docs/` - Detailed installation guides, wiring diagrams, and IBT-2 setup
+  - [TinyPilot Setup Guide](docs/tinypilot_setup.md)
+  - [Arduino Motor Controller Flashing Guide](docs/flashing_motor_ino_to_arduino.md)
+  - [24V Solar System Design](docs/24v_solar_system.md)
 - `/config/` - Sample pypilot configuration files for IBT-2 motor controller
 - `/scripts/` - Python utilities for motor testing, current monitoring, and diagnostics
 - `/hardware/` - Hardware specifications, IBT-2 datasheet, Ecowit WS80 info, component datasheets, legacy relay H-bridge photos

@@ -396,4 +396,7 @@ The IBT_2 with Octopus 1012 provides proportional control - pypilot can vary pum
 ***
 
 *Last updated: 2026-01-18*  
-*Part of pypilot4arion documentation*
+*Part of pypilot4arion documentation*.
+
+**Next Step:** Once the motor controller is ready, proceed to **[TinyPilot Setup & Configuration](tinypilot_setup.md)** to configure the main autopilot computer.
+```
