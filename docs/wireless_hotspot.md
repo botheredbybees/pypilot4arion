@@ -39,14 +39,270 @@ Tinypilot                    Lysmarine
 - NAV mode (receives waypoint data from OpenCPN)
 - Remote monitoring/control via OpenCPN plugin
 
+## Power Supply Configuration
+
+### DC-DC Buck Converter Modules
+
+The YachtArion system uses **two DC-DC buck converter modules** to provide clean, regulated 5V USB power from the boat's 12V system. These compact switching regulators convert ship's 12V DC (nominal 10-15V range) to stable 5V output suitable for USB devices.
+
+#### Buck Converter Specifications
+- **Input Voltage**: 6-35V DC (wide range accommodates voltage fluctuations)
+- **Output Voltage**: 5V DC (USB standard)
+- **Output Current**: 3A per module (continuous)
+- **Efficiency**: ~85-95% (minimal heat generation)
+- **Protection**: Over-current, over-temperature, short-circuit
+- **Connectors**: Screw terminals (input), dual USB-A ports (output)
+
+### Dual Converter Architecture (Recommended)
+
+**Why Two Converters?**
+
+Using both buck converters provides **redundancy, load distribution, and electrical isolation** for the critical autopilot system:
+
+#### Advantages of Dual-Converter Configuration
+
+1. **Load Distribution**: Splits power demand across two independent supplies, preventing overload
+2. **Thermal Management**: Lower load per converter = cooler operation = longer lifespan in marine heat
+3. **Redundancy**: If one converter fails, critical autopilot continues on the other
+4. **Electrical Isolation**: Separates autopilot circuit from navigation/communication systems, reducing electrical noise coupling
+5. **Maintenance Flexibility**: Can service one converter while system remains operational
+
+#### Power Distribution Schema
+
+```
+12V Ship's Power Bus (Fused)
+         |
+         ├─────────────────────────────────┐
+         |                                   |
+   Buck Converter #1                Buck Converter #2
+   (Critical Autopilot)            (Navigation/Comms)
+   Input: 12V, 3A fuse             Input: 12V, 5A fuse
+   Output: 5V @ 3A                 Output: 5V @ 3A
+         |                                   |
+         |                                   |
+    USB Port 1: Pi Zero W              USB Port 1: Pi 4 (Lysmarine)
+    (~500mA, 2.5W)                     (~1.5-3A, 7.5-15W)
+         |                                   |
+    USB Port 2: Arduino Motor          USB Port 2: Pixel 2 Phone
+    Controller                         (~1-2A, 5-10W)
+    (~200mA, 1W)
+         |
+   Total Load: ~3.5W                Total Load: ~15-25W
+   (Well under 15W capacity)        (Within 15W capacity)
+```
+
+#### Load Analysis
+
+**Buck Converter #1 - Critical Autopilot Circuit**:
+- **Raspberry Pi Zero W** (Tinypilot): 500mA @ 5V = 2.5W
+- **Arduino Motor Controller**: 100-200mA @ 5V = 0.5-1W
+- **Total Maximum Load**: ~3.5W (23% of 15W capacity)
+- **Headroom**: 76% (excellent margin for reliability)
+
+**Buck Converter #2 - Navigation & Communications**:
+- **Raspberry Pi 4 8GB** (Lysmarine): 1.5A @ 5V = 7.5W (idle), up to 3A = 15W (peak)
+- **Google Pixel 2 Phone**: 1-2A @ 5V = 5-10W (charging + hotspot active)
+- **Total Maximum Load**: ~20-25W (shared between dual USB ports)
+- **Note**: Pi 4 and phone will share 15W capacity, but rarely both peak simultaneously
+
+### Installation and Wiring
+
+#### Mounting Locations
+
+**Buck Converter #1 (Autopilot)**:
+- Mount near Pi Zero installation (minimize 5V cable runs)
+- Ensure adequate ventilation (though switching regulators run cool)
+- Protect from moisture and spray
+- Secure with marine-grade adhesive or screws
+
+**Buck Converter #2 (Navigation)**:
+- Mount near nav station (accessible for phone connection/disconnection)
+- Position for easy USB cable routing to Pi 4 and phone
+- Consider waterproof enclosure if exposed location
+
+#### Input Wiring (12V Side)
+
+**For Both Converters**:
+```
+12V Positive Bus → Inline Fuse → Red Wire → Buck Converter IN+
+12V Negative Bus → Black Wire → Buck Converter IN-
+```
+
+**Wire Specifications**:
+- **Wire Gauge**: 18 AWG or heavier (15A capacity for short runs < 10 feet)
+- **Fuse Rating**: 
+  - Converter #1 (Autopilot): 3A fast-blow (1.5x load)
+  - Converter #2 (Navigation): 5A fast-blow (1.5x load)
+- **Fuse Type**: ATO/ATC automotive blade fuse or AGC glass tube
+- **Fuse Location**: As close to power source as practical (< 12 inches)
+
+**Installation Steps**:
+1. **Power OFF**: Ensure 12V bus is de-energized before wiring
+2. **Strip Wire**: 1/4 inch exposed conductor, no fraying
+3. **Connect Input**:
+   - Positive (red) wire to IN+ screw terminal (tighten securely)
+   - Negative (black) wire to IN- screw terminal
+4. **Verify Polarity**: Double-check connections (reversed polarity can damage converter)
+5. **Install Fuse**: Insert fuse in holder on positive wire
+6. **Secure Wiring**: Use cable ties and conduit to protect from chafe
+
+#### Output Wiring (5V USB Side)
+
+**Buck Converter #1 (Autopilot)**:
+- **USB Port 1**: Connect micro-USB cable to Raspberry Pi Zero W
+  - Cable length: < 3 feet (minimize voltage drop)
+  - Cable quality: Use quality cable with 24/28 AWG power/data wires (not cheap thin cables)
+- **USB Port 2**: Connect USB cable to Arduino motor controller (if powered via USB)
+  - Alternative: Arduino may be powered from Pi Zero 5V pin if current budget allows
+
+**Buck Converter #2 (Navigation)**:
+- **USB Port 1**: Connect USB-C cable to Raspberry Pi 4 (via Argon ONE case USB-C port)
+  - Use quality USB-C cable rated for 3A
+  - Pi 4 official power supply specification: 5V 3A
+- **USB Port 2**: Connect USB-C cable to Google Pixel 2 phone
+  - Use quality USB-C cable (Pixel 2 standard charging cable)
+  - Phone should remain connected for continuous operation
+
+### Alternative Single-Converter Configuration (Not Recommended)
+
+If you choose to use only **one buck converter** for all devices:
+
+**Single Converter Load**:
+- Pi Zero W: 2.5W
+- Pi 4: 7.5-15W
+- Pixel 2: 5-10W
+- Arduino: 0.5-1W
+- **Total**: 15-28.5W peak (approaching or exceeding 15W capacity)
+
+**Risks of Single-Converter Setup**:
+1. **Overload Risk**: Total load can exceed 15W capacity, causing voltage sag or converter shutdown
+2. **No Redundancy**: Single point of failure—if converter fails, entire system goes offline
+3. **Thermal Stress**: Continuous high load reduces converter lifespan in warm marine environment
+4. **Voltage Drop**: Heavy load on single converter can cause voltage sag affecting all devices
+5. **No Isolation**: Electrical noise from navigation system can couple into sensitive autopilot circuit
+
+**If Single Converter is Used (Emergency Only)**:
+- Monitor converter temperature (should not exceed 60°C)
+- Add heatsink to converter if available
+- Ensure excellent ventilation
+- Limit simultaneous high-power operations (e.g., don't update Pi 4 while phone fast-charging)
+- Consider the single converter a temporary solution until second unit is installed
+
+### Voltage and Current Monitoring
+
+#### Verifying Output Voltage
+
+Use a multimeter to verify proper 5V output:
+
+```bash
+# Measure voltage at USB port with no load connected
+# Should read 5.0-5.2V DC (slightly high is normal for switching regulators)
+
+# Measure voltage at device end of USB cable under load
+# Should read 4.8-5.2V DC (some drop is normal due to cable resistance)
+```
+
+**Acceptable Voltage Range**:
+- **No Load**: 5.0-5.3V (slight overvoltage compensates for cable drop)
+- **Under Load**: 4.75-5.25V (USB specification allows ±5%)
+- **Undervoltage**: < 4.75V indicates overload or poor connections
+- **Overvoltage**: > 5.3V indicates converter malfunction (disconnect immediately)
+
+#### Current Monitoring
+
+**Measure Current Draw** (optional, for diagnostics):
+
+Use a USB power meter (available for ~$10-15 AUD) to monitor:
+- Real-time current draw per device
+- Voltage sag under load
+- Total power consumption (Watts)
+- Cumulative energy (mAh, Wh)
+
+**Normal Current Readings**:
+- **Pi Zero W**: 200-500mA idle, 500-700mA peak (WiFi active)
+- **Pi 4 8GB**: 600-1500mA idle, 2000-3000mA peak (CPU intensive)
+- **Pixel 2 Phone**: 500-1500mA charging, 1500-2000mA fast-charging
+- **Arduino**: 50-200mA typical
+
+### Troubleshooting Power Issues
+
+#### Converter Won't Output 5V
+
+**Symptoms**: No voltage at USB ports
+
+**Solutions**:
+1. Check 12V input voltage is present (measure at converter input terminals)
+2. Verify input polarity is correct (IN+ to positive, IN- to negative)
+3. Check input fuse is intact (replace if blown)
+4. Inspect screw terminals for loose connections
+5. Test converter with known-good load (USB desk fan, etc.)
+6. Replace converter if faulty
+
+#### Voltage Drop Under Load
+
+**Symptoms**: Devices reboot or undervoltage warnings (Pi 4 shows lightning bolt icon)
+
+**Solutions**:
+1. Measure voltage at device end of USB cable (not just at converter output)
+2. Replace cheap/thin USB cables with quality cables (24 AWG power wires)
+3. Shorten USB cable length (< 3 feet ideal)
+4. Reduce load on converter (move devices to second converter)
+5. Check for corroded connectors or poor crimps
+6. Verify converter output current rating (should be 3A minimum)
+
+#### Converter Overheating
+
+**Symptoms**: Converter feels very hot to touch (> 60°C), or thermal shutdown occurs
+
+**Solutions**:
+1. Reduce load (move devices to second converter)
+2. Improve ventilation around converter (add fan if necessary)
+3. Add heatsink to converter module if available
+4. Check for short circuit on output (disconnect all loads and measure)
+5. Verify input voltage not too high (> 15V can increase heat)
+
+#### Devices Intermittently Reboot
+
+**Symptoms**: Raspberry Pis or phone randomly reboot, especially under high load
+
+**Solutions**:
+1. Check for loose USB connections (reseat all cables)
+2. Verify voltage at device remains above 4.75V under load
+3. Inspect for corroded or oxidized contacts (clean with contact cleaner)
+4. Reduce simultaneous high-power operations (stagger startups)
+5. Upgrade to dual-converter configuration for isolation
+
 ## Setting Up the YachtArion Hotspot
 
 ### Prerequisites
 
 - Google Pixel 2 phone (or compatible Android device)
-- Active battery or 12V USB charger
+- DC-DC buck converter with USB outputs (configured per power section above)
+- USB-C cable for phone charging
 - MicroSD card (optional, for expanded storage)
 - Both Raspberry Pis configured with WiFi credentials
+
+### Phone Power Connection
+
+**Continuous Ship's Power (Recommended)**:
+
+1. **Connect USB-C cable** from Buck Converter #2 (Navigation) to Pixel 2 phone
+2. Phone will show **"Charging" status** when connected
+3. **Do not disconnect** during operation—phone should remain powered at all times
+4. Phone's **internal battery acts as UPS** during brief power interruptions
+
+**Power Management Strategy**:
+- Phone battery remains charged (90-100%) during normal operation
+- During power failure, phone battery provides hotspot for 4-6 hours (depending on usage)
+- When ship's power restored, phone automatically resumes charging
+- This provides **continuous network availability** even during power cycling
+
+**Battery Longevity Considerations**:
+- Keeping phone at 100% charge continuously can reduce battery lifespan
+- Modern Android devices use "trickle charging" to minimize degradation
+- Pixel 2 battery is replaceable (DIY or repair shop) if capacity degrades
+- Typical battery lifespan: 2-3 years of continuous charging in marine environment
+- Consider keeping spare phone with fresh battery as backup
 
 ### Initial Phone Configuration
 
@@ -665,33 +921,39 @@ For extended offshore cruising, consider adding a **4G USB modem** to Lysmarine 
 - Check hotspot is active and devices connected
 - Monitor phone battery health
 - Review data usage if SIM card active
+- Verify buck converters not overheating (touch test < 60°C)
 
 **Monthly (in port)**:
 - Restart phone to clear memory
 - Update Android OS and apps
 - Clean phone case and screen
 - Verify backup WiFi connections work
+- Inspect USB cables and connectors for corrosion
+- Check buck converter screw terminals for tightness
 
 **Annually**:
 - Factory reset phone for clean install (backup first)
 - Replace phone if battery degraded (< 80% health)
 - Update WiFi credentials (password rotation)
+- Replace USB cables showing wear or corrosion
+- Clean buck converter contacts with electrical contact cleaner
 
 ### Power Management
 
 **Best Practices for Marine Environment**:
 
-1. **Constant 12V USB Power**: Keep phone connected to ship's power via quality USB charger (2.4A+ output)
+1. **Constant 12V USB Power**: Keep phone connected to ship's power via buck converter (2.4A+ output)
 2. **Avoid Deep Discharge**: Keep battery above 20% even when on ship's power (battery longevity)
 3. **Temperature Control**: Ensure adequate ventilation—OLED screens and batteries degrade faster in heat
 4. **Backup Battery**: Phone's internal battery acts as UPS during power interruptions
-5. **Solar Charging**: Consider small USB solar panel for extended off-grid use
+5. **Solar Charging**: Buck converters work excellently with solar charge controllers (12V input)
 
-**Recommended 12V USB Charger Specifications**:
-- Input: 10-30V DC (wide range for marine systems)
-- Output: 5V @ 2.4A minimum (fast charging)
-- Overcurrent/short circuit protection
-- Marine-grade construction (corrosion-resistant)
+**Buck Converter Maintenance**:
+- Inspect screw terminals quarterly for looseness
+- Keep converters dry (waterproof enclosure if in exposed location)
+- Ensure adequate air circulation (don't enclose tightly)
+- Monitor temperature during high load operations
+- Replace converters if output voltage drifts outside 4.75-5.25V range
 
 ### Security Hardening
 
@@ -724,6 +986,7 @@ For extended offshore cruising, consider adding a **4G USB modem** to Lysmarine 
 - Store backup phone in waterproof dry bag
 - Document all network settings in ship's log
 - Keep written record of IP addresses and passwords
+- **Spare buck converter**: Keep one spare converter onboard for emergency replacement
 
 ## Future Enhancements
 
@@ -777,6 +1040,7 @@ The Google Pixel 2 hotspot provides a reliable, low-cost, and power-efficient ne
 - **Optional internet access** via SIM card for weather, charts, and updates
 - **Integrated display** for auxiliary navigation and instrument monitoring
 - **Low maintenance** with familiar Android interface
+- **Dual buck converter power** for redundancy and electrical isolation
 
 **Remember**: The autopilot is network-independent—compass and GPS modes work without any WiFi connectivity. The hotspot enhances functionality but is not critical for safe autopilot operation.
 
@@ -784,7 +1048,7 @@ For questions or improvements to this documentation, please open an issue at htt
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 1.1  
 **Last Updated**: January 19, 2026  
 **Maintainer**: botheredbybees  
 **Vessel**: SY Arion
