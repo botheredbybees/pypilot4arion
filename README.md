@@ -50,10 +50,11 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
   - Integration via SignalK for apparent/true wind calculation
 
 #### Network
-- **WiFi Access Point**: Google Pixel 2 Android phone mobile hotspot
+- **WiFi Access Point**: [Google Pixel 2 Android phone mobile hotspot](docs/wireless_hotspot.md)
 - **Network Architecture**: Both Raspberry Pis connect as WiFi clients to phone hotspot
 - **IP Addressing**: Static DHCP reservation recommended (e.g., Pi4: 192.168.43.100, Pi Zero: 192.168.43.101)
 - **Hotspot SSID**: "YachtArion" (configurable)
+- **Phone Power**: DC-DC buck converter module (12V to 5V USB) for continuous ship's power
 
 ### Software
 
@@ -531,6 +532,7 @@ Network connectivity is **optional** for Wind mode and NAV route following only.
 
 ### Network
 - Google Pixel 2 phone (already owned) - $A0 AUD
+- DC-DC buck converter (12V to 5V USB, 3A) - ~$A15-25 AUD
 - Mobile data plan (optional for weather) - varies
 
 ### Legacy Hardware Removed (For Reference)
@@ -563,6 +565,7 @@ Please open an issue for discussion before submitting pull requests.
 - [OpenPlotter Pypilot Documentation](https://openplotter.readthedocs.io/latest/pypilot/pypilot_app.html)
 - [Lysmarine (BBN OS) Documentation](https://bareboat-necessities.github.io/my-bareboat/)
 - [Tinypilot Information](https://pypilot.org)
+- [Wireless Hotspot Setup Guide](docs/wireless_hotspot.md)
 
 ### Community Forums
 - [OpenMarine Forum - Pypilot Section](https://forum.openmarine.net/forumdisplay.php?fid=17)
@@ -602,4 +605,4 @@ This documentation is released under MIT License. Pypilot software is licensed u
 **Vessel**: SY Arion (36ft)  
 **Location**: Cygnet, Tasmania, Australia
 
-**Last Updated**: January 18, 2026
+**Last Updated**: January 19, 2026
