@@ -21,7 +21,7 @@ The following items are **removed** from the vessel as part of the upgrade:
 
 ## 2. Rudder Feedback Wiring Strategy
 
-**Goal**: Feed the rudder position signal to *both* the Cockpit Gauge (so it still looks nice) and the Pypilot Arduino (so it can steer).
+**Goal**: Feed the rudder position signal to *both* the Cockpit Gauge (so it can still be used for manual steering) and the Pypilot Arduino (so it can steer).
 
 **The Circuit**:
 The RFU is a simple potentiometer (variable resistor). We will power it with a stable **5V** source.
