@@ -12,6 +12,7 @@ This project documents the installation and configuration of a pypilot-based aut
 - **Octopus Model 1012 hydraulic pump** (12V DC reversible motor)
 
 The system uses a dual-Raspberry Pi architecture combining reliability and functionality:
+
 - **Tinypilot** on Raspberry Pi Zero W for dedicated autopilot control
 - **Lysmarine** on Raspberry Pi 4 (8GB) for navigation, chartplotting, and marine data integration
 
@@ -20,6 +21,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 ### Hardware
 
 #### Autopilot System (Tinypilot)
+
 - **Computer**: Raspberry Pi Zero W
 - **Operating System**: Tinypilot (TinyCore Linux-based, runs from RAM)
 - **IMU**: Pypilot IMU with compass, gyroscope, and accelerometer
@@ -43,11 +45,13 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 - **Power**: 12V DC ship's power with 30A inline fuse protection
 
 **Legacy Hardware Removed:**
+
 - TQM AP8 autopilot control unit
 - 4x 12V automotive relays (30-40A rated, used as H-bridge for pump motor polarity switching)
 - Relay control wiring and driver circuits
 
 #### Navigation System (Lysmarine)
+
 - **Computer**: Raspberry Pi 4 (8GB RAM)
 - **Case**: Argon ONE V2 Aluminium Case with passive cooling
 - **Storage**: 512GB SSD
@@ -61,6 +65,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
   - Integration via SignalK for apparent/true wind calculation
 
 #### Network
+
 - **WiFi Access Point**: [Google Pixel 2 Android phone mobile hotspot](docs/wireless_hotspot.md)
 - **Network Architecture**: Both Raspberry Pis connect as WiFi clients to phone hotspot
 - **IP Addressing**: Static DHCP reservation recommended (e.g., Pi4: 192.168.43.100, Pi Zero: 192.168.43.101)
@@ -70,7 +75,8 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 ### Software
 
 #### Core Autopilot
-- **Pypilot**: Open-source marine autopilot software (https://pypilot.org)
+
+- **Pypilot**: Open-source marine autopilot software (<https://pypilot.org>)
 - **Tinypilot**: Minimal, dedicated pypilot distribution running from RAM
 - **Motor Controller Firmware**: motor.ino (Arduino-based pypilot motor driver)
   - Source: `arduino/motor/motor.ino` in pypilot repository
@@ -78,7 +84,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
   - Configurable for H-bridge operation (pwm_style=0) or ESC/VNH2SP30 mode (pwm_style=2)
   - Supports current sensing, voltage monitoring, temperature sensing
   - Hardware configuration via GPIO pins (D4, D5, D6 set operating mode)
-- **Control Modes**: 
+- **Control Modes**:
   - Compass (magnetic heading) - **fully standalone, no network required**
   - GPS (track following) - **standalone with local GPS, no network required**
   - Wind (apparent wind angle) - requires wind sensor data (future)
@@ -86,6 +92,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
   - NAV (route following) - requires waypoint data from OpenCPN via network
 
 #### Navigation & Integration
+
 - **Lysmarine (BBN OS)**: Comprehensive marine computing platform
 - **OpenCPN**: Electronic chart plotter and navigation software
 - **SignalK**: Modern marine data server for sensor integration and data multiplexing
@@ -94,6 +101,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 - **rtl_433 to SignalK bridge**: Converts decoded weather sensor data to SignalK format
 
 #### Data Protocols
+
 - **NMEA 0183**: GPS, wind, and sensor data (serial/USB on Pi Zero, TCP port 10110 over network)
 - **Pypilot TCP Protocol**: Autopilot control and status (TCP port 20220)
 - **Pypilot Serial Protocol**: Motor controller communication (38400 baud × DIV_CLOCK, USB serial)
@@ -104,7 +112,7 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 
 ### Network Topology
 
-```
+```text
 Pixel 2 Phone Hotspot (192.168.43.1)
          |
          |--- Raspberry Pi 4 (192.168.43.100)
@@ -144,7 +152,7 @@ Pixel 2 Phone Hotspot (192.168.43.1)
 
 ### Motor Control Chain
 
-**Pypilot → Arduino → IBT-2 → Hydraulic Pump**
+Pypilot → Arduino → IBT-2 → Hydraulic Pump
 
 1. **Pypilot** calculates steering correction based on IMU/GPS data
 2. **Serial command** sent from Pi Zero to Arduino (USB serial, 4-byte packets)
@@ -167,29 +175,30 @@ Pixel 2 Phone Hotspot (192.168.43.1)
 
 ### Arduino motor.ino Wiring
 
-```
-Arduino Nano          IBT-2           Function
-────────────          ─────           ────────
-D9  (PWM)       →     RPWM (pin 1)    Right/Forward PWM signal
-D10 (PWM)       →     LPWM (pin 2)    Left/Reverse PWM signal  
-D2  (GPIO)      →     R_EN (pin 3)    Right enable/direction
-D3  (GPIO)      →     L_EN (pin 4)    Left enable/direction
-A1  (ADC)       ←     R_IS (pin 5)    Right current sense
-                      L_IS (pin 6)    (tie to R_IS for single reading)
-5V              →     Vcc (pin 7)     Logic power (can use Arduino 5V)
-GND             →     GND (pin 8)     Common ground
+| Arduino Nano | IBT-2 | Function |
+| --- | --- | --- |
+| D9 (PWM) → RPWM (pin 1) | | Right/Forward PWM signal |
+| D10 (PWM) → LPWM (pin 2) | | Left/Reverse PWM signal |
+| D2 (GPIO) → R_EN (pin 3) | | Right enable/direction |
+| D3 (GPIO) → L_EN (pin 4) | | Left enable/direction |
+| A1 (ADC) ← R_IS (pin 5) | | Right current sense |
+| | L_IS (pin 6) | (tie to R_IS for single reading) |
+| 5V → Vcc (pin 7) | | Logic power (can use Arduino 5V) |
+| GND → GND (pin 8) | | Common ground |
 
-# Hardware configuration pins (set at boot):
-D4  ────────────      Shunt resistance select (floating = 0.05Ω)
-D5  ────────────      Low/high current mode (floating = low, 20A max)
-D6  ────────────      **GROUND THIS** for H-bridge mode (pwm_style=0)
-D7  (GPIO INPUT)      Port fault switch (optional limit switch)
-D8  (GPIO INPUT)      Starboard fault switch (optional limit switch)
-D11 (GPIO OUT)        Clutch output (not used with IBT-2)
-D12 (GPIO INPUT)      Voltage sense mode (floating = 12V mode)
-D13 (LED)             Status LED (on when engaged)
+### Hardware configuration pins (set at boot)
 
-# Sensor inputs:
+| D4 | | Shunt resistance select (floating = 0.05Ω) |
+| D5 | | Low/high current mode (floating = low, 20A max) |
+| D6 | | **GROUND THIS** for H-bridge mode (pwm_style=0) |
+| D7 (GPIO INPUT) | | Port fault switch (optional limit switch) |
+| D8 (GPIO INPUT) | | Starboard fault switch (optional limit switch) |
+| D11 (GPIO OUT) | | Clutch output (not used with IBT-2) |
+| D12 (GPIO INPUT) | | Voltage sense mode (floating = 12V mode) |
+| D13 (LED) | | Status LED (on when engaged) |
+
+### Sensor inputs
+
 A0  (ADC)       →     Voltage divider (560Ω + 10kΩ to GND) for battery voltage
 A1  (ADC)       →     Current sense from IBT-2 (R_IS/L_IS)
 A2  (ADC)       →     Controller temp (100kΩ to 5V + 10kΩ NTC to GND)
@@ -197,14 +206,15 @@ A3  (ADC)       →     Motor temp (100kΩ to 5V + 10kΩ NTC to GND) - optional
 A4  (ADC)       →     Rudder feedback sensor (potentiometer) - optional
 A5  (GPIO)            Clutch sense PWM (not used with IBT-2)
 
-# Pi Zero connection:
+### Pi Zero connection
+
 USB ───────────       Mini-USB port on Arduino Nano
                       Appears as /dev/ttyUSB0 on Pi Zero
                       Baud: 38400 × DIV_CLOCK (typically 153600)
-```
 
 **IBT-2 to Hydraulic Pump:**
-```
+
+```text
 Motor+ (out)  →  Octopus 1012 motor terminal (polarity determines initial direction)
 Motor- (out)  →  Octopus 1012 motor terminal (reverse polarity if wrong direction)
 B+ (power in) →  12V ship's power (30A fused)
@@ -216,7 +226,7 @@ B- (power in) →  12V ground/negative bus
 The Arduino firmware supports multiple control modes selected by D6 pin state:
 
 | D6 Pin State | pwm_style | Mode | Application |
-|--------------|-----------|------|-------------|
+| --- | --- | --- | --- |
 | **LOW (GND)** | **0** | **H-bridge** | **IBT-2, direct MOSFET control** |
 | HIGH (pullup) | 1 | RC PWM servo | Standard RC ESC (1-2ms pulses) |
 | (compiled) | 2 | VNH2SP30 | Specific motor driver IC |
@@ -227,7 +237,7 @@ The Arduino firmware supports multiple control modes selected by D6 pin state:
 
 Motor.ino uses a simple 4-byte packet protocol with CRC8 validation:
 
-```
+```text
 Byte 0: Command code (e.g., 0xC7 for COMMAND_CODE)
 Byte 1: Value low byte
 Byte 2: Value high byte  
@@ -235,6 +245,7 @@ Byte 3: CRC8 of bytes 0-2
 ```
 
 **Common commands (from pypilot to Arduino):**
+
 - `0xC7` COMMAND_CODE: Motor command (0-2000, 1000=stop)
 - `0x68` DISENGAGE_CODE: Stop motor and disengage
 - `0x1E` MAX_CURRENT_CODE: Set current limit (units of 10mA)
@@ -243,6 +254,7 @@ Byte 3: CRC8 of bytes 0-2
 - `0xE7` RESET_CODE: Reset fault flags
 
 **Telemetry responses (from Arduino to pypilot):**
+
 - `0x1C` CURRENT_CODE: Motor current reading
 - `0xB3` VOLTAGE_CODE: Supply voltage
 - `0xF9` CONTROLLER_TEMP_CODE: Controller temperature
@@ -251,6 +263,7 @@ Byte 3: CRC8 of bytes 0-2
 - `0x8F` FLAGS_CODE: Status and fault flags
 
 **Flag bits:**
+
 - SYNC (1): Serial communication synchronized
 - OVERTEMP_FAULT (2): Temperature exceeded limit
 - OVERCURRENT_FAULT (4): Current exceeded limit
@@ -268,12 +281,14 @@ Byte 3: CRC8 of bytes 0-2
 ### Data Flow
 
 **GPS to Autopilot (Standalone Mode):**
+
 1. USB GPS receiver connected directly to Pi Zero W USB port
 2. Pypilot reads NMEA sentences from USB serial device (auto-detected at 4800 or 38400 baud)
 3. Pypilot uses GPS data for GPS track mode **without requiring network or Pi 4**
 4. Pi Zero operates fully standalone for both Compass and GPS modes
 
 **Autopilot Control Loop:**
+
 1. User sets heading via OpenCPN or Tinypilot web interface
 2. Command sent to pypilot server (TCP 20220)
 3. Pypilot reads IMU (compass heading, heel, pitch) at 10-20Hz
@@ -289,6 +304,7 @@ Byte 3: CRC8 of bytes 0-2
 13. Loop continues at 10Hz control frequency
 
 **Status Monitoring:**
+
 1. Pypilot broadcasts heading, rudder angle, autopilot mode, motor current
 2. OpenCPN pypilot plugin displays real-time status and allows mode changes
 3. SignalK distributes autopilot data to other marine instruments
@@ -299,6 +315,7 @@ Byte 3: CRC8 of bytes 0-2
 ## Key Features
 
 ### Reliability
+
 - **Standalone Operation**: Tinypilot operates independently in Compass and GPS modes without network or Pi 4
 - **Local GPS**: USB GPS connected directly to Pi Zero enables GPS track mode without network dependency
 - **RAM-based OS**: Tinypilot runs entirely from RAM after boot—safe power disconnection, no SD card corruption
@@ -312,6 +329,7 @@ Byte 3: CRC8 of bytes 0-2
 - **Unlimited Switching**: MOSFETs have no wear limit unlike relay contacts (millions of operations)
 
 ### Safety
+
 - **Network Independence**: Core steering function never depends on WiFi connectivity
 - **Rudder Feedback**: Continuous position monitoring prevents rudder runaway (if sensor installed)
 - **Current Limiting**: Arduino monitors pump load via IBT-2 current sense and detects stall/overload
@@ -326,9 +344,10 @@ Byte 3: CRC8 of bytes 0-2
 - **Watchdog Timer**: Arduino watchdog resets if firmware hangs (0.25 second timeout)
 
 ### Flexibility
+
 - **Multiple Control Interfaces**:
   - OpenCPN pypilot plugin (graphical, route integration)
-  - Tinypilot web interface (http://192.168.43.101)
+  - Tinypilot web interface (<http://192.168.43.101>)
   - Optional RF remote control
   - Optional GPIO physical buttons
   - Optional IR remote
@@ -343,6 +362,7 @@ Byte 3: CRC8 of bytes 0-2
 ## Installation Overview
 
 ### Phase 1: Hardware Removal & Preparation
+
 1. **Remove legacy TQM AP8 system**:
    - Disconnect power to TQM AP8 control unit
    - Remove 4x 12V automotive relays from relay H-bridge circuit
@@ -358,6 +378,7 @@ Byte 3: CRC8 of bytes 0-2
    - Confirm no hydraulic leaks in system
 
 ### Phase 2: Arduino Motor Controller Setup
+
 1. **Flash motor.ino to Arduino Nano**:
    - Install Arduino IDE on Ubuntu (see [docs/flashing_motor_ino_to_arduino.md](docs/flashing_motor_ino_to_arduino.md))
    - Troubleshoot CH340 USB drivers for Chinese Arduino clones if needed
@@ -384,6 +405,7 @@ Byte 3: CRC8 of bytes 0-2
    - A2 ← Controller temp sensor (100kΩ to 5V + 10kΩ NTC thermistor to GND)
    - A4 ← Rudder position sensor (potentiometer: 5V, wiper to A4, GND)
 5. **Test Arduino serial communication**:
+
    ```bash
    # Connect Arduino to computer via USB
    screen /dev/ttyUSB0 153600  # For DIV_CLOCK=4: 38400 × 4 = 153600 baud
@@ -391,7 +413,8 @@ Byte 3: CRC8 of bytes 0-2
    # Press Ctrl+A then K to exit
    ```
 
-### Phase 3: IBT-2 and Pump Wiring
+## Phase 3: IBT-2 and Pump Wiring
+
 1. **Mount IBT-2 near hydraulic pump** (minimize motor cable length, ensure ventilation)
 2. **Wire IBT-2 to hydraulic pump**:
    - Use 12AWG or heavier wire for motor connections
@@ -410,7 +433,8 @@ Byte 3: CRC8 of bytes 0-2
    - Measure current draw with multimeter (should be 4-6A under no-load)
    - Listen for unusual noises or vibrations
 
-### Phase 4: Tinypilot Hardware Installation
+## Phase 4: Tinypilot Hardware Installation
+
 1. Mount Raspberry Pi Zero W near compass location (away from magnetic interference)
 2. Install pypilot IMU with proper orientation and calibration access
 3. **Connect Arduino to Pi Zero via USB**:
@@ -424,10 +448,11 @@ Byte 3: CRC8 of bytes 0-2
    - GPS powers from Pi Zero USB port (verify power consumption < 500mA)
 5. Optionally connect rudder feedback sensor to Arduino A4 (if not already done)
 
-### Phase 5: Tinypilot Software Setup
+## Phase 5: Tinypilot Software Setup
+
 1. Flash Tinypilot image to Pi Zero SD card
 2. Configure WiFi client mode for Pixel 2 phone hotspot (SSID: "YachtArion")
-3. Boot Pi Zero and connect to Tinypilot web interface (http://192.168.43.101)
+3. Boot Pi Zero and connect to Tinypilot web interface (<http://192.168.43.101>)
 4. **Configure motor controller for Arduino**:
    - Set motor driver type to "arduino" or "motor.ino"
    - Configure serial port (typically `/dev/ttyUSB0`, auto-detected)
@@ -480,7 +505,6 @@ Target performance after tuning:
 - Heading hold: ±3° RMS (sailing), ±2° RMS (motoring)
 - Response time: < 5 seconds
 - Power consumption: < 80W average active steering
-
 
 ## Repository Contents
 
@@ -545,7 +569,7 @@ uint8_t max_slew_slow = 75;
 ### GPIO Pin Assignment Table
 
 | Arduino Pin | Function | Connection | Notes |
-|-------------|----------|------------|-------|
+| --- | --- | --- | --- |
 | **D2** | H-bridge A bottom | IBT-2 R_EN | Direction control (H-bridge mode) |
 | **D3** | H-bridge B bottom | IBT-2 L_EN | Direction control (H-bridge mode) |
 | D4 | Shunt resistance | Config (floating) | HIGH=0.05Ω, LOW=0.01Ω |
@@ -573,11 +597,11 @@ uint8_t max_slew_slow = 75;
 - **Motor Switching Speed**: <1µs (solid-state) vs ~10-20ms (relay-based legacy system)
 - **Serial Protocol Latency**: ~100ms (4-byte packets at 153600 baud, with CRC validation)
 - **Safety Response Time**: ~100ms (Arduino monitors current/voltage/temp at 10-50Hz)
-- **Power Consumption**: 
+- **Power Consumption**:
   - Pi Zero: ~2.4W (200mA @ 12V)
   - Arduino Nano: ~0.6W (50mA @ 12V via USB)
   - USB GPS: ~0.6W (50mA @ 12V via USB)
-  - Pi 4: ~7.5W (625mA @ 12V) 
+  - Pi 4: ~7.5W (625mA @ 12V)
   - Hydraulic pump (active steering): 48-72W average (4-6A @ 12V), 228W peak (19A @ 12V)
   - Hydraulic pump (holding course): ~24-60W intermittent
   - IBT-2 standby: <1W (vs ~2-4W for relay coils in legacy system)
@@ -591,7 +615,8 @@ uint8_t max_slew_slow = 75;
 
 ## Bill of Materials (BOM)
 
-### Core Autopilot Components
+## Core Autopilot Components
+
 - Raspberry Pi Zero W - ~$22 AUD
 - Pypilot IMU (MPU9250 or ICM-20948 based) - ~$75-150 AUD
 - **Arduino Nano (clone with CH340 USB)** - ~$7-15 AUD
@@ -603,7 +628,8 @@ uint8_t max_slew_slow = 75;
 - Power wiring (10-12AWG), 30A inline fuse, connectors - ~$45 AUD
 - **Total Core System**: ~$236-387 AUD
 
-### Legacy Hardware Removed (For Reference)
+## Legacy Hardware Removed (For Reference)
+
 - TQM AP8 control unit - removed
 - 4x 12V automotive relays (30-40A SPDT) - removed
 - Relay control wiring and driver circuits - removed
@@ -613,17 +639,20 @@ uint8_t max_slew_slow = 75;
 
 ## Resources
 
-### Pypilot Motor Controller Documentation
+## Pypilot Motor Controller Documentation
+
 - [motor.ino Source Code](https://github.com/pypilot/pypilot/tree/master/arduino/motor)
 - [motor.ino README](https://github.com/pypilot/pypilot/blob/master/arduino/motor/README)
 - [Arduino Motor Controller Installation Guide](docs/flashing_motor_ino_to_arduino.md) (this repository)
 
-### IBT-2 and BTS7960B Resources
+## IBT-2 and BTS7960B Resources
+
 - [BTS7960B Datasheet (Infineon)](https://www.infineon.com/dgdl/bts7960b.pdf)
 - [IBT-2 with Arduino - Dr. Rainer Hessmer](https://www.hessmer.org/blog/2013/12/28/ibt-2-h-bridge-with-arduino/)
 - [DCC-EX IBT_2 Motor Board Setup](https://dcc-ex.com/reference/hardware/motorboards/IBT_2-motor-board-setup.html)
 
 ### Community Forums
+
 - [OpenMarine Forum - IBT-2 with Pypilot](https://forum.openmarine.net/showthread.php?tid=3388)
 - [Pypilot GitHub - Motor Controller Discussions](https://github.com/pypilot/pypilot/discussions)
 
@@ -647,4 +676,3 @@ This documentation is released under MIT License. Pypilot software (including mo
 **Location**: Cygnet, Tasmania, Australia
 
 **Last Updated**: January 20, 2026
-```
