@@ -150,6 +150,24 @@ If using a generic "Boost Converter":
 >
 > If using **Isolated** DC-DC transformers (Orion-Tr *Isolated*), you *can* keep the grounds separate, but check your Autopilot/Instrument ground paths. Often the autopilot computer touches both power ground and NMEA data ground, forcing a common ground anyway. **Plan for a common negative system.**
 
+## Critical Warning: Load Terminals & Ground Loops
+
+> [!CAUTION]
+> **DO NOT connect your Autopilot or Raspberry Pis to the "Load" terminals of the solar controller.**
+>
+> 1.  **Common Positive Design**: The cheap yellow/orange solar controllers (like the one pictured) often switch the **Negative** line to control loads. This means "Load Negative" is NOT the same as "Battery Negative".
+> 2.  **The "Backdoor Ground" Trap**:
+>     *   Your Raspberry Pi connects to the Arduino (USB).
+>     *   The Arduino connects to the IBT-2 Motor Controller.
+>     *   The IBT-2 connects directly to the **Battery Negative** (High Current Bus).
+>     *   **Result**: Your Pi is grounded to the battery via the USB/Signal cables.
+> 3.  **The Smoke Scenario**:
+>     *   If you power the Pi from the Solar "Load" terminals and the controller tries to switch it OFF (or PWM dims it), the ground path is broken *at the controller*.
+>     *   The current will try to find a way back to the battery. It will flow through the **thin USB signal wires** -> Arduino -> IBT-2 -> Battery.
+>     *   **Outcome**: Melted USB cables and a fried Raspberry Pi/Arduino.
+>
+> **Solution**: Power your 24V->5V Buck Converters directly from the **24V Fuse Block (Bus A)**. Do not pass Go, do not touch the Load terminals.
+
 ## Start Battery Protection
 The propulsion motor draws purely from the 24V bank. You cannot accidentally flatten the start battery by motoring too long.
 *   **House Dead?**: Engine still starts (independent battery).
@@ -157,5 +175,6 @@ The propulsion motor draws purely from the 24V bank. You cannot accidentally fla
 
 ---
 
-**Document Version**: 2.0 (Hybrid Topology)
-**Last Updated**: January 20, 2026
+**Document Version**: 2.1 (Ground Loop Warnings)
+**Last Updated**: January 21, 2026
+
