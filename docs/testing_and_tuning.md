@@ -28,11 +28,13 @@ This guide covers systematic testing from bench validation through sea trials, f
 #### 1.1 Arduino Serial Communication Test
 
 **Equipment needed:**
+
 - Arduino Nano with motor.ino flashed
 - USB cable
 - Computer with screen/minicom installed
 
 **Procedure:**
+
 ```bash
 # Connect Arduino to computer
 screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
@@ -48,11 +50,13 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 ```
 
 **Success criteria:**
+
 - ✓ Regular telemetry packets received
 - ✓ No communication errors in dmesg
 - ✓ Arduino LED (D13) flashes periodically
 
 **Troubleshooting:**
+
 - No data: Check baud rate matches motor.ino DIV_CLOCK setting
 - Garbage data: Wrong baud rate, check USB cable quality
 - CH340 not detected: Install/update CH340 drivers (see installation guide)
@@ -60,27 +64,33 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 1.2 Arduino Flag Status Check
 
 **Equipment needed:**
+
 - Bench power supply (12V, 2A minimum)
 - Multimeter
 
 **Procedure:**
+
 1. Connect Arduino to 12V bench supply via voltage divider on A0:
    - 560Ω resistor from 12V+ to A0
    - 10kΩ resistor from A0 to GND
 2. Connect Arduino to Pi Zero via USB
 3. On Pi Zero, run pypilot in verbose mode:
+
    ```bash
    pypilot --verbose
    # or
    pypilot_client 192.168.43.101 | grep flags
    ```
+
 4. Check flag output for:
+
    - `SYNC` flag set (communication established)
    - No `BAD_FUSES` flag (if set, ATmega328P needs fuse programming)
    - No `BADVOLTAGE_FAULT` (voltage reading within 9-20V range)
    - No `INVALID` flag (CRC8 validation passing)
 
 **Success criteria:**
+
 - ✓ SYNC flag consistently set
 - ✓ Voltage reading correct (within 0.5V of actual supply)
 - ✓ No persistent fault flags
@@ -88,18 +98,21 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 1.3 IBT-2 Bench Test (Motor Disconnected)
 
 **Equipment needed:**
+
 - IBT-2 motor controller
 - 12V bench supply (30A capable) or car battery
 - Arduino with motor.ino
 - Multimeter or oscilloscope
 
 **Procedure:**
+
 1. Wire Arduino to IBT-2 as per installation guide (D9, D10, D2, D3, GND, 5V)
 2. Connect 12V supply to IBT-2 B+/B- (motor outputs OPEN, not connected yet)
 3. Ground Arduino D6 pin (H-bridge mode)
 4. Power Arduino from bench supply or USB
 5. On Pi Zero, manually command motor via pypilot web interface:
-   ```
+
+   ```text
    Navigate to: http://192.168.43.101
    Engage autopilot
    Use servo.command slider: 
@@ -107,17 +120,21 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
    - Move to 500 (port)
    - Return to 1000 (stop)
    ```
+
 6. Monitor with multimeter or scope:
+
    - At command 1500: D9 (RPWM) should show PWM, D10 (LPWM) = 0V
    - At command 500: D10 (LPWM) should show PWM, D9 (RPWM) = 0V
    - At command 1000: Both D9 and D10 should be 0V (or brake mode)
 
 **Success criteria:**
+
 - ✓ PWM signals appear on correct pins for forward/reverse commands
 - ✓ No PWM on both channels simultaneously (would indicate H-bridge shoot-through risk)
 - ✓ IBT-2 doesn't overheat (should be cool to touch at no-load)
 
 **Troubleshooting:**
+
 - No PWM output: Check D6 is grounded (H-bridge mode), verify Arduino D9/D10 wiring
 - Wrong direction: Expected behavior at this stage, will reverse in motor testing
 - Both outputs active: CRITICAL - do not connect motor, check motor.ino code
@@ -125,30 +142,36 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 1.4 Current Sense Calibration
 
 **Equipment needed:**
+
 - IBT-2 with motor connected
 - Clamp ammeter or inline ammeter (20A range)
 - Hydraulic pump (Octopus 1012)
 
 **Procedure:**
+
 1. Connect ammeter in series with pump motor
 2. Connect motor to IBT-2 outputs (Motor+, Motor-)
 3. Command motor via pypilot to 25% duty cycle (command ~1250)
 4. Measure actual current with ammeter
 5. Check Arduino telemetry for current reading:
+
    ```bash
    pypilot_client 192.168.43.101 | grep servo.current
    ```
+
 6. Compare telemetry reading to ammeter:
    - Telemetry is in units of amperes (decimal)
    - Should match ammeter within ±10%
 7. Repeat at 50% and 75% duty cycles
 
 **Success criteria:**
+
 - ✓ Current readings within ±10% of ammeter at all duty cycles
 - ✓ Current sense responds to load changes
 - ✓ No overcurrent faults during normal operation
 
 **Calibration adjustment** (if needed):
+
 - Edit motor.ino `TakeAmps()` function for your shunt configuration
 - Common adjustments:
   - If reads high: Reduce multiplier in calculation
@@ -158,10 +181,12 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 1.5 Pump Direction Verification
 
 **Equipment needed:**
+
 - Hydraulic pump connected to steering ram
 - Ability to observe rudder movement
 
 **Procedure:**
+
 1. With pump connected to hydraulic ram on boat (or test stand)
 2. Command small starboard turn via pypilot (command ~1200)
 3. Observe rudder direction:
@@ -171,12 +196,14 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
    - Should move to port (left when viewed from stern)
 
 **Success criteria:**
+
 - ✓ Starboard command → rudder moves starboard
 - ✓ Port command → rudder moves port
 - ✓ Stop command → pump stops immediately
 - ✓ Smooth startup (no jerking or hammering)
 
 **Correction** (if directions reversed):
+
 - Swap Motor+ and Motor- connections at IBT-2 output terminals
 - Alternatively, swap D9/D10 wiring at Arduino (less preferred)
 
@@ -187,7 +214,8 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 2.1 IMU Calibration and Compass Check
 
 **Procedure:**
-1. Access Tinypilot web interface: http://192.168.43.101
+
+1. Access Tinypilot web interface: <http://192.168.43.101>
 2. Navigate to Calibration section
 3. Perform compass calibration:
    - Follow on-screen instructions to rotate boat through 360°
@@ -203,6 +231,7 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
    - Verify compass heading remains stable (not affected by heel)
 
 **Success criteria:**
+
 - ✓ Compass calibration completes without errors
 - ✓ Heading matches handheld compass within ±5°
 - ✓ Heading stable during induced heel
@@ -211,19 +240,23 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 2.2 Rudder Feedback Calibration (If Sensor Installed)
 
 **Procedure:**
+
 1. Turn rudder hard to port (manually or via engine)
 2. Note pypilot rudder angle reading (should be minimum value)
 3. Turn rudder hard to starboard
 4. Note pypilot rudder angle reading (should be maximum value)
 5. Set pypilot rudder limits:
+
    ```python
    # Via pypilot_client or web interface
    servo.rudder_min = [value at port limit]  # e.g., 5000
    servo.rudder_max = [value at starboard limit]  # e.g., 60000
    ```
+
 6. Verify midpoint corresponds to rudder centered
 
 **Success criteria:**
+
 - ✓ Rudder angle tracks actual rudder position linearly
 - ✓ Full rudder range mapped to 0-100% in pypilot
 - ✓ Centered rudder reads approximately 50%
@@ -231,6 +264,7 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 2.3 Manual Control Test
 
 **Procedure:**
+
 1. Engage autopilot in manual mode (no heading hold)
 2. Use web interface sliders to command rudder:
    - Small port command (~900)
@@ -249,6 +283,7 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
    - Verify rudder stops immediately (within 0.5 seconds)
 
 **Success criteria:**
+
 - ✓ Rudder responds to all commands correctly
 - ✓ Response time < 1 second
 - ✓ Manual override possible with moderate force
@@ -258,28 +293,33 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 2.4 Safety System Tests
 
 **Test emergency stop:**
+
 1. Engage autopilot and command rudder movement
 2. Press emergency stop (if physical button installed)
 3. Verify rudder stops immediately and pypilot shows fault
 
 **Test over-current protection:**
+
 1. Reduce `servo.max_current` to artificially low value (e.g., 500 = 5A)
 2. Command rudder movement
 3. Verify autopilot disengages with OVERCURRENT_FAULT
 4. Reset `servo.max_current` to proper value (1500 = 15A)
 
 **Test low voltage protection:**
+
 1. Temporarily reduce voltage via voltage divider or adjust threshold
 2. Verify autopilot disengages with BADVOLTAGE_FAULT below 9V
 3. Restore normal voltage monitoring
 
 **Test rudder limit switches (if installed):**
+
 1. Turn rudder to physical port limit
 2. Verify D7 fault switch triggers and autopilot prevents further port movement
 3. Verify starboard commands still work
 4. Repeat for starboard limit switch (D8)
 
 **Success criteria:**
+
 - ✓ All safety systems trigger appropriately
 - ✓ Autopilot disengages and sets fault flags
 - ✓ Faults clear when condition resolved
@@ -288,9 +328,11 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 #### 2.5 Power Consumption Baseline
 
 **Equipment needed:**
+
 - Clamp ammeter on 12V supply to pypilot system
 
 **Procedure:**
+
 1. Measure current with autopilot disengaged (standby):
    - Record Pi Zero + Arduino + GPS current draw
    - Typical: ~300-400mA (3.6-4.8W at 12V)
@@ -304,6 +346,7 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
    - Estimate average power consumption for passage planning
 
 **Success criteria:**
+
 - ✓ Standby power < 5W
 - ✓ Active steering power matches pump specifications
 - ✓ No unexpected high current draw (indicates mechanical binding)
@@ -317,6 +360,7 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 **Conditions:** Calm water, no significant wind/current, motoring at 4-5 knots
 
 **Procedure:**
+
 1. Motor on steady heading for 2 minutes manually to establish baseline
 2. Note compass heading, engage autopilot in Compass mode
 3. Observe autopilot behavior for 10 minutes:
@@ -332,13 +376,15 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 6. Record which speed produces smoothest autopilot behavior
 
 **Success criteria:**
+
 - ✓ Holds heading within ±10° (initial test, will improve with tuning)
 - ✓ No continuous oscillation (hunting)
 - ✓ Rudder corrections smooth, not hammering
 - ✓ Manual override still easy
 
 **Data to record:**
-```
+
+```text
 Test: Motoring Compass Mode
 Date/Time: ___________
 Conditions: Wind ___ kts from ___, Sea state ___
@@ -364,6 +410,7 @@ Results:
 **Conditions:** Same as above, open water with room to maneuver
 
 **Procedure:**
+
 1. Set a waypoint 0.5nm ahead on current heading
 2. Engage GPS track mode targeting that waypoint
 3. Observe for 5 minutes:
@@ -377,6 +424,7 @@ Results:
    - Time to settle on new course?
 
 **Success criteria:**
+
 - ✓ Tracks directly toward waypoint (minimal S-curves)
 - ✓ Cross-track error < 50m (will improve with tuning)
 - ✓ Smooth course changes without overshoot
@@ -389,6 +437,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 **Quick tuning for motoring:**
 
 1. **Start with conservative values:**
+
    ```python
    servo.P = 0.005  # Proportional gain
    servo.I = 0.0    # Integral (disable initially)
@@ -419,6 +468,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 **Conditions:** 8-12 knots wind, close-hauled, heel 10-20°
 
 **Procedure:**
+
 1. Trim sails for optimal upwind performance manually
 2. Establish steady heading for 2 minutes
 3. Engage autopilot in Compass mode
@@ -432,12 +482,14 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
    - Does it settle on new heading smoothly?
 
 **Success criteria:**
+
 - ✓ Holds heading within ±5° while close-hauled
 - ✓ Heading stable despite heel angle changes
 - ✓ Successful tacks without manual intervention
 - ✓ Settles on new heading within 45 seconds after tack
 
 **Notes:**
+
 - Sailing requires more aggressive PID tuning than motoring
 - May need separate PID profiles for upwind vs. downwind
 
@@ -446,6 +498,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 **Conditions:** 8-12 knots wind, broad reach or run, minimal heel
 
 **Procedure:**
+
 1. Establish broad reach or run manually
 2. Engage autopilot
 3. Observe for 15 minutes:
@@ -456,6 +509,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
    - Observe turn and settling
 
 **Success criteria:**
+
 - ✓ Holds heading within ±3° on reach/run
 - ✓ No accidental jibes
 - ✓ Smooth controlled jibes when commanded
@@ -465,6 +519,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 **Conditions:** Steady breeze, sailing close-hauled
 
 **Procedure:**
+
 1. Verify wind sensor data appearing in pypilot
 2. Engage Wind mode, set apparent wind angle (e.g., 45°)
 3. Observe:
@@ -473,6 +528,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 4. Test across range of wind angles (close-hauled to broad reach)
 
 **Success criteria:**
+
 - ✓ Maintains constant apparent wind angle within ±5°
 - ✓ Adapts to wind shifts within 5 seconds
 - ✓ Stable in varying wind strengths
@@ -486,6 +542,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 **Conditions:** Day sail, good visibility, moderate conditions
 
 **Procedure:**
+
 1. Engage autopilot at start of passage
 2. Monitor continuously for first hour, then check every 15 minutes
 3. Record:
@@ -499,6 +556,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
    - Verify smooth transitions
 
 **Success criteria:**
+
 - ✓ Operates unattended for > 4 hours
 - ✓ No unexpected faults or disengagements
 - ✓ Course keeping within ±5° average
@@ -510,6 +568,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 **Conditions:** Extended sail, watch-keeping crew, moderate to fresh conditions
 
 **Procedure:**
+
 1. Begin passage with autopilot engaged
 2. Maintain watch schedule with regular autopilot checks
 3. Document:
@@ -520,6 +579,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 4. Monitor battery charge throughout passage
 
 **Success criteria:**
+
 - ✓ Operates reliably through night passage
 - ✓ Watch keepers comfortable with autopilot behavior
 - ✓ No surprise disengagements
@@ -534,6 +594,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 #### 6.1 Moderate Sea State (2-3m Waves)
 
 **Procedure:**
+
 1. Start in moderate conditions (15-20 knots wind, 2m seas)
 2. Engage autopilot in Compass mode
 3. Observe:
@@ -546,6 +607,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
    - Consider reducing sail area if weather helm excessive
 
 **Success criteria:**
+
 - ✓ Maintains course within ±10° in moderate seas
 - ✓ Rudder activity appropriate (not constant thrashing)
 - ✓ No loss of control or broaching
@@ -554,6 +616,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
 #### 6.2 Current and Load Monitoring
 
 **Procedure:**
+
 1. Monitor motor current during heavy weather operation
 2. Check for:
    - Peak currents approaching `servo.max_current` limit
@@ -565,6 +628,7 @@ See [PID Tuning Guide](#pid-tuning-guide) section below for detailed tuning proc
    - Reduce sail if excessive weather helm
 
 **Success criteria:**
+
 - ✓ Current stays below pump rating (19A max for Octopus 1012)
 - ✓ No over-temperature faults
 - ✓ Pump not running continuously (should have idle periods)
@@ -594,7 +658,7 @@ Pypilot uses a PID (Proportional-Integral-Derivative) controller to maintain hea
 
 ### Ziegler-Nichols Tuning Method (Modified for Marine Use)
 
-**Step 1: Find Critical Gain (Ku)**
+### Step 1: Find Critical Gain (Ku)
 
 1. Set I = 0, D = 0
 2. Set P to small value (0.001)
@@ -602,40 +666,42 @@ Pypilot uses a PID (Proportional-Integral-Derivative) controller to maintain hea
 4. Record P value where oscillation starts = Ku (critical gain)
 5. Measure oscillation period in seconds = Tu (critical period)
 
-**Step 2: Calculate Initial PID Values**
+### Step 2: Calculate Initial PID Values
 
 For "some overshoot" (good for autopilot):
-```
+
+```python
 P = 0.33 × Ku
 I = 0.5 × P / Tu  
 D = 0.33 × P × Tu
 ```
 
 For "no overshoot" (conservative):
-```
+
+```python
 P = 0.2 × Ku
 I = 0.4 × P / Tu
 D = 0.067 × P × Tu  
 ```
 
-**Step 3: Fine-Tune by Observation**
+### Step 3: Fine-Tune by Observation
 
 1. Test calculated values in real conditions
 2. Adjust based on behavior:
 
    **If heading wanders too much:**
    - Increase P by 20%
-   
+
    **If boat oscillates (hunts):**
    - Decrease P by 20%
    - Or increase D by 50%
-   
+
    **If persistent offset (always left/right of heading):**
    - Increase I by small amount (double it, starting from 0.00001)
-   
+
    **If corrections too jerky:**
    - Increase D by 50%
-   
+
    **If too sluggish:**
    - Decrease D by 30%
    - Or increase P by 20%
@@ -667,21 +733,25 @@ servo.D = 0.2
 ### Condition-Specific Tuning
 
 **Upwind sailing:**
+
 - Higher P for responsiveness to wind shifts
 - Higher D to dampen oscillation from waves
 - Small I to counter weather helm
 
 **Downwind sailing:**
+
 - Lower P (less weather helm, easier steering)
 - Moderate D for smoothness
 - Very small or zero I
 
 **Heavy weather:**
+
 - Lower P to prevent overcorrection in waves
 - Much higher D for damping (may double or triple)
 - Reduce `servo.max_slew_speed` to prevent thrashing
 
 **Light air:**
+
 - May need higher P for responsiveness at low speeds
 - Lower D (less momentum to dampen)
 
@@ -739,11 +809,13 @@ pypilot_client_load heavy_weather_profile
 **Symptoms:** Constant S-curve weaving, heading passes through target repeatedly
 
 **Causes:**
+
 - P gain too high
 - D gain too low
 - Speed too low (autopilot over-controls at low speeds)
 
 **Solutions:**
+
 1. Reduce P by 20-30%
 2. Increase D by 50-100%
 3. If at low speed (< 2 knots), increase speed or hand-steer
@@ -753,11 +825,13 @@ pypilot_client_load heavy_weather_profile
 **Symptoms:** Heading consistently 5-10° off target, slow to correct
 
 **Causes:**
+
 - P gain too low
 - I gain too low (if persistent offset in one direction)
 - Excessive rudder deadband
 
 **Solutions:**
+
 1. Increase P by 20-30%
 2. If offset always same direction, add small I (start at 0.00001)
 3. Check for mechanical binding in steering system
@@ -767,11 +841,13 @@ pypilot_client_load heavy_weather_profile
 **Symptoms:** Pump starts/stops rapidly, jarring corrections
 
 **Causes:**
+
 - D gain too low
 - Slew rate too high
 - Sensor noise causing rapid command changes
 
 **Solutions:**
+
 1. Increase D by 50-100%
 2. Reduce `servo.max_slew_speed` by 30%
 3. Check IMU mounting for vibration
@@ -782,6 +858,7 @@ pypilot_client_load heavy_weather_profile
 **Symptoms:** Autopilot stops, fault flag set
 
 **Causes:**
+
 - Over-current fault (binding, low battery, high load)
 - Over-temperature fault (poor ventilation, high ambient temp)
 - Bad voltage fault (low battery, poor connections)
@@ -790,23 +867,27 @@ pypilot_client_load heavy_weather_profile
 **Solutions:**
 
 **For OVERCURRENT_FAULT:**
+
 1. Check `servo.current` reading - if near `servo.max_current`, increase limit
 2. Verify battery voltage under load (should be > 12V)
 3. Check for mechanical binding in steering system
 4. Ensure hydraulic fluid level adequate
 
 **For OVERTEMP_FAULT:**
+
 1. Improve ventilation around Arduino and IBT-2
 2. Reduce duty cycle (less aggressive PID gains, lower slew rate)
 3. Lower `servo.max_controller_temp` threshold for earlier warning
 
 **For BADVOLTAGE_FAULT:**
+
 1. Check battery state of charge
 2. Test voltage at Arduino under load (should be > 11V)
 3. Verify wiring connections (no voltage drop due to resistance)
 4. Consider larger wire gauge or dedicated circuit for autopilot
 
 **For communication timeout:**
+
 1. Check USB connection between Pi Zero and Arduino
 2. Verify Arduino still running (D13 LED should flash)
 3. Check Pi Zero hasn't locked up (ping 192.168.43.101)
@@ -817,11 +898,13 @@ pypilot_client_load heavy_weather_profile
 **Symptoms:** Battery drains faster than expected during autopilot use
 
 **Causes:**
+
 - Excessive rudder activity (PID gains too aggressive)
 - Mechanical friction in steering system
 - Current sense calibration incorrect (reading low, allowing excessive current)
 
 **Solutions:**
+
 1. Reduce PID gains (less rudder activity)
 2. Increase D gain (smoother corrections use less power)
 3. Lubricate steering components, check hydraulic system
@@ -833,22 +916,28 @@ pypilot_client_load heavy_weather_profile
 **Symptoms:** GPS mode available but boat doesn't track waypoints
 
 **Causes:**
+
 - No GPS fix (not enough satellites)
 - GPS data not reaching pypilot
 - Cross-track error tolerance too tight
 
 **Solutions:**
+
 1. Verify GPS has fix:
+
    ```bash
    pypilot_client 192.168.43.101 | grep gps.fix
    # Should show: gps.fix = True
    ```
+
 2. Check GPS receiver connection (USB, power LED)
 3. Give GPS time to acquire fix (may take 1-5 minutes cold start)
 4. Verify GPS data in pypilot logs:
+
    ```bash
    tail -f ~/.pypilot/pypilot.log | grep NMEA
    ```
+
 5. Check waypoint is set correctly in OpenCPN or pypilot interface
 
 ## Data Logging and Performance Analysis
@@ -892,7 +981,7 @@ with open('pypilot.log') as f:
 After tuning, your system should achieve:
 
 | Metric | Target (Motoring) | Target (Sailing) |
-|--------|------------------|------------------|
+| -------- | ------------------ | ------------------ |
 | Heading hold accuracy | ±2° RMS | ±3° RMS |
 | Maximum heading error | < 5° | < 8° |
 | Corrections per minute | 5-15 | 10-25 |
