@@ -396,6 +396,7 @@ Stop:              All relays de-energized (motor floating)
   - [Backup & Recovery](docs/backup_and_recovery.md)
   - [Network Map](docs/network_map.md)
   - [Cockpit Quick Ref](docs/cockpit_quick_ref.md)
+  - [Project Shopping List](docs/shopping_list.md)
 - `/config/` - Sample pypilot configuration files for IBT-2 motor controller
 - `/scripts/` - Python utilities for motor testing, current monitoring, and diagnostics
 - `/hardware/` - Hardware specifications, IBT-2 datasheet, Ecowit WS80 info, component datasheets, legacy relay H-bridge photos

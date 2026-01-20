@@ -29,7 +29,7 @@
 3.  **Monitor**: Ensure boat tracks the line. Watch for XTE (Cross Track Error).
 
 ## 5. Trolling Motor (Propulsion)
-1.  **Deploy**: Lover motor into water. Lock depth collar.
+1.  **Deploy**: Lower motor into water. Lock depth collar.
 2.  **Power**: Switch **Propulsion** breaker ON (24V Bus).
 3.  **Throttle**: Use remote/tiller to advance speed slowly.
     *   *Warning*: Monitor Battery Voltage. Stop if < 23.0V.
