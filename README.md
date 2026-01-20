@@ -387,8 +387,15 @@ Stop:              All relays de-energized (motor floating)
 - `/docs/` - Detailed installation guides, wiring diagrams, and IBT-2 setup
   - [TinyPilot Setup Guide](docs/tinypilot_setup.md)
   - [Lysmarine Integration Guide](docs/lysmarine_integration.md)
+  - [Wind Sensor Integration (Ecowit WS80)](docs/wind_sensor_integration.md)
+  - [House Rewiring Plan](docs/rewiring_house_loads.md)
   - [Arduino Motor Controller Flashing Guide](docs/flashing_motor_ino_to_arduino.md)
   - [24V Solar System Design](docs/24v_solar_system.md)
+  - [Emergency Procedures](docs/emergency_procedures.md)
+  - [Maintenance Schedule](docs/maintenance_schedule.md)
+  - [Backup & Recovery](docs/backup_and_recovery.md)
+  - [Network Map](docs/network_map.md)
+  - [Cockpit Quick Ref](docs/cockpit_quick_ref.md)
 - `/config/` - Sample pypilot configuration files for IBT-2 motor controller
 - `/scripts/` - Python utilities for motor testing, current monitoring, and diagnostics
 - `/hardware/` - Hardware specifications, IBT-2 datasheet, Ecowit WS80 info, component datasheets, legacy relay H-bridge photos
