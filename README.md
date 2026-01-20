@@ -450,7 +450,37 @@ Byte 3: CRC8 of bytes 0-2
 
 ### Phase 6: Testing and Tuning
 
-See [Installation Overview - Phase 6](#phase-6-testing-and-tuning) section for detailed testing procedures.
+Complete testing and tuning procedures are detailed in a separate comprehensive guide:
+
+**[→ Testing and Tuning Guide](docs/testing_and_tuning.md)**
+
+This guide covers:
+
+- **Bench testing** (Arduino, IBT-2, current sense calibration)
+- **Dockside testing** (IMU calibration, safety systems, power consumption)
+- **Motoring trials** (compass mode, GPS tracking, initial PID tuning)
+- **Sailing trials** (upwind/downwind, heel compensation, wind mode)
+- **Extended passages** (4-12 hour reliability validation)
+- **Heavy weather testing** (performance in challenging conditions)
+- **PID tuning guide** (Ziegler-Nichols method, condition-specific adjustments)
+- **Troubleshooting** (common issues and solutions)
+- **Performance benchmarks** (target metrics for well-tuned system)
+
+**Quick Summary:**
+
+1. **Bench test** all components before installation
+2. **Dockside test** safety systems and basic functionality
+3. **Motor** in calm conditions for initial PID tuning  
+4. **Sail** in light winds to validate performance
+5. **Extended passages** to prove reliability
+6. **Heavy weather** testing only after all other phases successful
+
+Target performance after tuning:
+
+- Heading hold: ±3° RMS (sailing), ±2° RMS (motoring)
+- Response time: < 5 seconds
+- Power consumption: < 80W average active steering
+
 
 ## Repository Contents
 

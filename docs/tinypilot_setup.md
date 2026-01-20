@@ -90,6 +90,10 @@ The compass must be calibrated to your boat's magnetic environment.
 
 ## Testing
 
+Complete testing and tuning procedures are detailed in a separate comprehensive guide:
+
+**[→ Testing and Tuning Guide](testing_and_tuning.md)**
+
 ### Dockside Test
 1.  **Manual Control**:
     *   Open the Web UI (`http://192.168.43.101`).
