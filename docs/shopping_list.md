@@ -7,6 +7,7 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
 
 ## 1. Power System (24V Hybrid)
 *Reference: [24V Solar Design](24v_solar_system.md)*
+*> ⚠️ **User Purchased Budget Hardware**: See [Hardware Safety Review](hardware_review.md) for critical mitigations for Temu/Generic components.*
 
 ### Critical
 *   [ ] **12V->24V DC-DC Charger (The Bridge)**: Victron Orion-Tr Smart 12/24-18 Isolated (or Non-Isolated).

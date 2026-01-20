@@ -515,6 +515,7 @@ Target performance after tuning:
   - [motor.ino Configuration Reference](docs/motor_ino_configuration.md)
   - [Rudder Feedback & Gauge Setup](docs/rudder_feedback_setup.md)
   - [Wind Sensor Integration (Ecowit WS80)](docs/wind_sensor_integration.md)
+  - [Hardware Safety Review](docs/hardware_review.md)
 - `/arduino/motor/` - motor.ino source code from pypilot repository
   - `motor.ino` - Main firmware file
   - `crc.h` - CRC8 implementation
