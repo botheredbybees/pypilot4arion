@@ -513,6 +513,7 @@ Target performance after tuning:
   - [TinyPilot Setup Guide](docs/tinypilot_setup.md)
   - [Lysmarine Integration Guide](docs/lysmarine_integration.md)
   - [motor.ino Configuration Reference](docs/motor_ino_configuration.md)
+  - [Rudder Feedback & Gauge Setup](docs/rudder_feedback_setup.md)
   - [Wind Sensor Integration (Ecowit WS80)](docs/wind_sensor_integration.md)
 - `/arduino/motor/` - motor.ino source code from pypilot repository
   - `motor.ino` - Main firmware file
