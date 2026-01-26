@@ -10,15 +10,15 @@
 
 ## Static IP Allocations
 
-| Device | IP Address | MAC Address | Role |
+| Device | IP Address | Configuration Method | Role |
 | :--- | :--- | :--- | :--- |
-| **EZR23 Router** | `192.168.20.1` | (Check router label) | Gateway / DHCP Server / 4G Internet / WiFi AP |
-| **Lysmarine** | `192.168.20.100` | (Pi 4 - TBD) | Navigation / OpenCPN / Signal K Server |
-| **TinyPilot** | `192.168.20.101` | (Pi Zero - TBD) | Autopilot Core / Motor Control |
-| **User Laptop**| DHCP (50-150) | - | Configuration / Monitoring |
-| **Tablet/Phone**| DHCP (50-150) | - | Remote Display / Control |
+| **EZR23 Router** | `192.168.20.1` | Router default | Gateway / DHCP Server / 4G Internet / WiFi AP |
+| **Lysmarine** | `192.168.20.100` | Static on Pi | Navigation / OpenCPN / Signal K Server |
+| **TinyPilot** | `192.168.20.101` | Static on Pi | Autopilot Core / Motor Control |
+| **User Laptop**| DHCP (50-150) | DHCP | Configuration / Monitoring |
+| **Tablet/Phone**| DHCP (50-150) | DHCP | Remote Display / Control |
 
-**Note**: Configure static DHCP reservations on the router using MAC addresses once devices are commissioned.
+**Note**: Static IPs are configured directly on each Raspberry Pi for easier hardware replacement in marine environments. If a board fails, a replacement can be configured with the same IP without router changes.
 
 ## Service Ports
 
@@ -83,9 +83,9 @@ graph TD
     end
     
     subgraph Computing
-        RTL -->|USB| Lysmarine[Lysmarine Pi 4<br/>192.168.20.100]
+        RTL -->|USB| Lysmarine[Lysmarine Pi 4<br/>192.168.20.100<br/>Static IP]
         Lysmarine -->|rtl_433| SK[Signal K Server<br/>Port 3000]
-        SK -->|WiFi JSON| TP[TinyPilot Pi Zero<br/>192.168.20.101]
+        SK -->|WiFi JSON| TP[TinyPilot Pi Zero<br/>192.168.20.101<br/>Static IP]
         TP -->|I2C| IMU[IMU Sensor<br/>MPU-9250/BNO055]
     end
     
@@ -121,28 +121,80 @@ http://192.168.20.1
 # Configure:
 # - WiFi SSID: YachtArion
 # - WiFi Password: [Strong password]
-# - Mobile APN: [Carrier specific]
-# - DHCP range: 192.168.20.50-150
+# - Mobile APN: [Carrier specific - telstra.internet for Telstra]
+# - DHCP range: 192.168.20.50-150 (excludes .100 and .101)
+# - Assign mobile interface to WAN firewall zone
 ```
 
 ### 2. Configure Static IPs on Raspberry Pis
 
-**Lysmarine (192.168.20.100)**:
+**Important**: Static IPs are configured on the Pis themselves (not DHCP reservations) for easier hardware replacement. This allows you to swap a failed Pi with a pre-configured replacement without touching router settings.
+
+#### Lysmarine (192.168.20.100)
+
+**Using nmcli (NetworkManager - recommended)**:
 ```bash
+# SSH into Lysmarine Pi
+ssh pi@192.168.20.x  # Initially will have DHCP address
+
+# Configure static IP on YachtArion WiFi connection
 sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.100/24
 sudo nmcli con mod "YachtArion" ipv4.gateway 192.168.20.1
 sudo nmcli con mod "YachtArion" ipv4.dns "8.8.8.8 1.1.1.1"
 sudo nmcli con mod "YachtArion" ipv4.method manual
 sudo nmcli con up "YachtArion"
+
+# Verify configuration
+ip addr show wlan0
+ping 192.168.20.1
 ```
 
-**TinyPilot (192.168.20.101)**:
+**Alternative: Edit dhcpcd.conf (for Raspberry Pi OS Lite)**:
 ```bash
+sudo nano /etc/dhcpcd.conf
+
+# Add at the end:
+interface wlan0
+static ip_address=192.168.20.100/24
+static routers=192.168.20.1
+static domain_name_servers=8.8.8.8 1.1.1.1
+
+# Save and restart
+sudo systemctl restart dhcpcd
+```
+
+#### TinyPilot (192.168.20.101)
+
+**Using nmcli**:
+```bash
+# SSH into TinyPilot Pi
+ssh pi@192.168.20.x  # Initially will have DHCP address
+
+# Configure static IP
 sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.101/24
 sudo nmcli con mod "YachtArion" ipv4.gateway 192.168.20.1
 sudo nmcli con mod "YachtArion" ipv4.dns "8.8.8.8 1.1.1.1"
 sudo nmcli con mod "YachtArion" ipv4.method manual
 sudo nmcli con up "YachtArion"
+
+# Verify
+ip addr show wlan0
+ping 192.168.20.1
+ping 192.168.20.100  # Test connectivity to Lysmarine
+```
+
+**Alternative: Edit dhcpcd.conf**:
+```bash
+sudo nano /etc/dhcpcd.conf
+
+# Add at the end:
+interface wlan0
+static ip_address=192.168.20.101/24
+static routers=192.168.20.1
+static domain_name_servers=8.8.8.8 1.1.1.1
+
+# Save and restart
+sudo systemctl restart dhcpcd
 ```
 
 ### 3. Verify Connectivity
@@ -157,9 +209,12 @@ ping 192.168.20.101        # TinyPilot
 ping 8.8.8.8
 ping google.com
 
-# Check routing
+# Check routing table
 ip route show
 # Should show: default via 192.168.20.1 dev wlan0
+
+# Verify DNS resolution
+nslookup google.com
 ```
 
 ### 4. Configure Signal K Connections
@@ -178,6 +233,27 @@ In OpenCPN pypilot plugin settings:
 - **Host**: `192.168.20.101`
 - **Port**: `20220`
 
+## Hardware Replacement Procedure
+
+**Advantage of Static IP Configuration**: When a Pi fails at sea, you can swap it with a spare that has been pre-configured with the same IP address. No router access needed.
+
+### Preparing Spare Pis
+
+1. Image SD cards with base OS (Lysmarine or Raspberry Pi OS)
+2. Boot each spare and configure its static IP as shown above
+3. Label SD cards clearly: "Lysmarine Spare - .100" or "TinyPilot Spare - .101"
+4. Store spares in waterproof case with documentation
+
+### Swapping a Failed Pi
+
+1. Power down the failed Pi
+2. Remove SD card and replace with pre-configured spare
+3. Power up - it will immediately acquire the correct IP address
+4. No router configuration changes needed
+5. Services (Signal K, pypilot) will be reachable at same addresses
+
+**Note**: Keep backup images of working SD cards for creating new spares.
+
 ## Troubleshooting
 
 ### Cannot Access Router
@@ -187,30 +263,67 @@ In OpenCPN pypilot plugin settings:
 iwconfig
 nmcli dev status
 
-# Try connecting via Ethernet if available
-# Reset router to defaults if necessary (hold reset button)
+# If connected but no access, check IP:
+ip addr show wlan0
+# Should show 192.168.20.100 or .101
+
+# Try pinging gateway
+ping 192.168.20.1
 ```
 
 ### Pis Cannot See Each Other
 
 ```bash
-# Check IP configuration
+# Check IP configuration on both
 ip addr show wlan0
+
+# Verify both have correct IPs:
+# Lysmarine: 192.168.20.100
+# TinyPilot: 192.168.20.101
 
 # Check routing table
 ip route
 
-# Verify both on same subnet (192.168.20.x)
-# Check router firewall settings (should allow LAN-to-LAN by default)
+# Test connectivity
+ping 192.168.20.100  # From TinyPilot
+ping 192.168.20.101  # From Lysmarine
 ```
+
+### Static IP Not Applied After Reboot
+
+```bash
+# Check if configuration persisted
+nmcli con show "YachtArion" | grep ipv4
+
+# Or check dhcpcd.conf
+cat /etc/dhcpcd.conf | grep -A 5 "interface wlan0"
+
+# Re-apply if needed (see configuration steps above)
+```
+
+### IP Conflict Warning
+
+**Symptoms**: Router or devices report duplicate IP address.
+
+**Cause**: Static IPs (.100, .101) overlap with DHCP range.
+
+**Solution**: Ensure router DHCP range is `192.168.20.50-150` which excludes .100 and .101.
 
 ### No Internet via 4G
 
 ```bash
-# Check router status page for mobile connection
-# Verify SIM has data and is not blocked
-# Check APN settings match carrier requirements
-# Confirm DNS servers are configured (8.8.8.8, 1.1.1.1)
+# Verify gateway is reachable
+ping 192.168.20.1
+
+# Check if router has internet
+# (Access router web interface at http://192.168.20.1)
+
+# Verify DNS is working
+nslookup google.com
+
+# Check routing
+ip route show
+# Must show: default via 192.168.20.1
 ```
 
 ### Signal K Cannot Connect to Pypilot
@@ -223,8 +336,9 @@ telnet 192.168.20.101 20220
 ssh pi@192.168.20.101
 sudo systemctl status pypilot
 
-# Check pypilot is listening on correct port:
+# Check pypilot is listening on correct interface:
 sudo netstat -tlnp | grep 20220
+# Should show: 0.0.0.0:20220 or 192.168.20.101:20220
 ```
 
 ## Security Considerations
@@ -235,16 +349,18 @@ sudo netstat -tlnp | grep 20220
 - Keep router firmware updated
 
 ### Pi Security
-- Change default `pi` user password
+- Change default `pi` user password on both Pis
 - Enable SSH key authentication
-- Disable password authentication for SSH (after keys configured)
+- Consider disabling password authentication for SSH (after keys configured)
 - Keep OS and pypilot software updated
+- Document passwords in secure location (boat safe)
 
 ### WiFi Security
 - Use WPA2 or WPA3 encryption
 - Use strong WiFi password (minimum 16 characters)
 - Disable WPS if enabled
-- Consider hiding SSID broadcast when not actively needed
+- Document WiFi password for crew
+- Consider hiding SSID broadcast when not actively cruising
 
 ## Maintenance
 
@@ -253,11 +369,38 @@ sudo netstat -tlnp | grep 20220
 - Check data usage if on metered plan
 - Verify dual-SIM failover functionality before extended passages
 - Test backup connectivity options
+- Verify spare Pi SD cards boot correctly
+
+### Before Extended Passages
+- Test all network connections
+- Verify internet access via 4G
+- Confirm Signal K receiving pypilot data
+- Check antenna connections are secure
+- Test hardware replacement procedure with spares
+- Document current configuration
 
 ### Backup Connectivity
-- Keep Pixel 2 as backup hotspot
+- Keep Pixel 2 as backup hotspot (different subnet: 192.168.43.x)
 - Document alternate APN settings for different carriers
 - Consider satellite backup for offshore passages
+- Carry spare SIM cards for both carriers
+
+## Configuration Backup
+
+### Router Configuration
+- Export router config via admin interface (System > Backup/Restore)
+- Store backup file in repository or secure cloud storage
+- Document APN settings, WiFi password, and any custom firewall rules
+
+### Raspberry Pi Configuration
+- Create SD card images of working systems:
+  ```bash
+  # From another Linux system with SD card
+  sudo dd if=/dev/sdX of=lysmarine-backup-YYYYMMDD.img bs=4M status=progress
+  sudo dd if=/dev/sdX of=tinypilot-backup-YYYYMMDD.img bs=4M status=progress
+  ```
+- Store images on external drive
+- Document all configuration changes in this repository
 
 ## References
 
@@ -265,3 +408,4 @@ sudo netstat -tlnp | grep 20220
 - [Pypilot User Manual](https://pypilot.org/doc/pypilot_user_manual/)
 - [Signal K Documentation](https://signalk.org/)
 - [12V Solar System](./12v_solar_system.md) - Power system details
+- [Raspberry Pi Network Configuration](https://www.raspberrypi.org/documentation/configuration/wireless/)
