@@ -592,3 +592,10 @@ gzip tinypilot-backup-*.img
 - [Network Map](./network_map.md)
 - [12V Solar System](./12v_solar_system.md)
 - [Raspberry Pi GPIO Pinout](https://pinout.xyz/)
+
+
+## Related Documentation
+
+- [TinyPilot Button Setup](./button_control.md) - Adding GPIO connected buttons for pypilot control
+- [Hardware Review](./hardware_review.md) - Complete hardware overview
+- [Testing and Tuning](./testing_and_tuning.md) - Autopilot configuration

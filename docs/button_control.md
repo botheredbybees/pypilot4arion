@@ -505,14 +505,3 @@ def update_status_leds(self):
 - [Testing and Tuning](./testing_and_tuning.md) - Autopilot configuration
 
 
-***
-
-**To add this file:**
-
-1. In your GitHub repository, navigate to `docs/`
-2. Click "Add file" → "Create new file"
-3. Name it `button_control.md`
-4. Paste the content above
-5. Commit with message: "Add button control guide with gpiozero examples"
-
-**Also update `docs/tinypilot_setup.md` line ~145** to remove `wiringpi` and add `python3-smbus python3-smbus2 python3-gpiozero` to the apt install command.
