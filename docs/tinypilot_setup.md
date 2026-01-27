@@ -168,8 +168,8 @@ sudo apt upgrade -y
 
 # Install required packages
 sudo apt install -y python3-pip python3-dev python3-setuptools \
-  python3-numpy python3-scipy git i2c-tools wiringpi cmake \
-  python3-pil python3-flask python3-socketio libpython3-dev
+  python3-numpy python3-scipy git i2c-tools python3-smbus python3-smbus2 cmake \
+  python3-pil python3-flask python3-socketio libpython3-dev python3-gpiozero
 
 # Enable I2C interface
 sudo raspi-config nonint do_i2c 0
