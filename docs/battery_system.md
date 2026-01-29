@@ -6,6 +6,7 @@
 This document details the dual battery system for Arion (36ft pilot-house sloop, Yanmar 3YM20 20hp), transitioning from single house battery to separate starter (small, 50-75Ah) and house (large 12V). Central wiring panel (2m aft of batteries forward, 3m forward of solar/wind aft) hosts VSR, MPPT (550W solar), PL20 (Rutland wind), buses/fuses. Alternator (80W Alpha Pro) and wind prioritize starter; solar direct house; VSR combines >13.3V. Ensures starter reliability, house capacity.[1][2]
 
 ## System Diagram
+
 ```mermaid
 graph TD
     subgraph "Aft (Solar/Wind)"
