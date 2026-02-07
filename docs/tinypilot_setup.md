@@ -149,7 +149,7 @@ sudo i2cdetect -y 1
 2. **Configure OS settings** in Imager (gear icon):
    - Set hostname: `tinypilot`
    - Enable SSH
-   - Set username/password (e.g., `pi` / strong password)
+   - Set username/password (e.g., `bbb` / strong password)
    - Configure WiFi: SSID `YachtArion`, password, country AU
    - Set locale/timezone: Australia/Hobart
 
@@ -159,24 +159,30 @@ sudo i2cdetect -y 1
 
 ```bash
 # SSH into Pi (will initially have DHCP address)
-ssh pi@tinypilot.local
-# or find DHCP address and: ssh pi@192.168.20.x
+ssh bbb@tinypilot.local
+# or find DHCP address and: ssh bbb@192.168.20.x
 
 # Update system
 sudo apt update
 sudo apt upgrade -y
 
-# Install required packages
+# Install required system packages
 sudo apt install -y python3-pip python3-dev python3-setuptools \
-  python3-numpy python3-scipy git i2c-tools python3-smbus python3-smbus2 cmake \
-  python3-pil python3-flask python3-socketio libpython3-dev python3-gpiozero
+  python3-numpy python3-scipy python3-pil python3-flask python3-socketio \
+  git i2c-tools python3-smbus python3-smbus2 cmake libpython3-dev \
+  python3-gpiozero pipx
 
 # Enable I2C interface
 sudo raspi-config nonint do_i2c 0
 
+# Configure pipx path
+pipx ensurepath
+
 # Reboot
 sudo reboot
 ```
+
+**Important**: We removed `wiringpi` (deprecated) and added `pipx` for proper Python package installation.
 
 ### 3. Configure Static IP Address
 
@@ -184,7 +190,7 @@ sudo reboot
 
 ```bash
 # SSH back in
-ssh pi@tinypilot.local
+ssh bbb@tinypilot.local
 
 # Configure static IP using nmcli
 sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.101/24
@@ -219,28 +225,45 @@ sudo systemctl restart dhcpcd
 
 ### 4. Install Pypilot Software
 
+> [!IMPORTANT]
+> **Understanding Pypilot Repositories**:
+> - **pypilot** = Main autopilot software (steering logic, motor control, IMU handling)
+> - **pypilot_data** = Calibration data files and configuration templates
+> 
+> You need to install **pypilot** first, then **pypilot_data**. Don't confuse them!
+
+> [!WARNING]
+> **Why pipx?** Modern Raspberry Pi OS uses "externally-managed-environment" which blocks direct `pip install` commands. Using `pipx` creates isolated environments for each application, avoiding conflicts and system breakage.
+
 ```bash
 # SSH to tinypilot
-ssh pi@192.168.20.101
+ssh bbb@192.168.20.101
 
-# Clone pypilot repository
+# Clone the MAIN pypilot repository
 cd ~
 git clone https://github.com/pypilot/pypilot.git
 cd pypilot
 
-# Install Python dependencies
-pip3 install -r requirements.txt
+# Install pypilot using pipx (handles Python environment isolation)
+pipx install .
 
-# Build and install pypilot
-python3 setup.py build
-sudo python3 setup.py install
+# Verify installation
+pypilot --version
 
-# Install pypilot_data (calibration/config files)
+# Clone pypilot_data repository (configuration and calibration data)
 cd ~
 git clone https://github.com/pypilot/pypilot_data.git
 cd pypilot_data
-sudo python3 setup.py install
+
+# Inject pypilot_data into pypilot's environment
+pipx inject pypilot .
 ```
+
+**What just happened?**
+- `pipx install .` created an isolated Python environment for pypilot
+- Pypilot executables (`pypilot`, `pypilot_web`) are now in your PATH
+- `pipx inject` added pypilot_data into pypilot's environment
+- No conflicts with system Python packages
 
 ### 5. Create Pypilot Service
 
@@ -258,9 +281,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi
-ExecStart=/usr/local/bin/pypilot
+User=bbb
+WorkingDirectory=/home/bbb
+ExecStart=/home/bbb/.local/bin/pypilot
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -300,9 +323,9 @@ Requires=pypilot.service
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi
-ExecStart=/usr/local/bin/pypilot_web
+User=bbb
+WorkingDirectory=/home/bbb
+ExecStart=/home/bbb/.local/bin/pypilot_web
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -468,6 +491,23 @@ Complete testing and tuning procedures are detailed in:
 
 ## Troubleshooting
 
+### "Externally Managed Environment" Error
+
+If you see this error when trying to use `pip install`:
+
+```
+error: externally-managed-environment
+```
+
+**Solution**: Use `pipx` instead of `pip` for installing applications:
+```bash
+# Wrong:
+pip3 install pypilot
+
+# Correct:
+pipx install pypilot
+```
+
 ### Web Interface Not Loading
 
 ```bash
@@ -475,7 +515,7 @@ Complete testing and tuning procedures are detailed in:
 ping 192.168.20.101
 
 # Check web service status
-ssh pi@192.168.20.101
+ssh bbb@192.168.20.101
 sudo systemctl status pypilot_web.service
 
 # Check if web service is listening
@@ -495,7 +535,7 @@ ls /dev/ttyUSB* /dev/ttyACM*
 dmesg | tail -20
 
 # Verify permissions
-sudo usermod -a -G dialout pi
+sudo usermod -a -G dialout bbb
 
 # Check pypilot logs
 sudo journalctl -u pypilot.service | grep -i motor
@@ -545,10 +585,10 @@ sudo systemctl status pypilot.service
 sudo journalctl -u pypilot.service -n 50
 
 # Try running manually
-/usr/local/bin/pypilot
+~/.local/bin/pypilot
 
-# Check for Python errors
-python3 -c "import pypilot; print(pypilot.__version__)"
+# Check pypilot installation
+pipx list
 ```
 
 ### Power Issues (Random Reboots)
@@ -585,6 +625,7 @@ gzip tinypilot-backup-*.img
 ## References
 
 - [Pypilot GitHub](https://github.com/pypilot/pypilot)
+- [Pypilot Data GitHub](https://github.com/pypilot/pypilot_data)
 - [Pypilot Documentation](https://pypilot.org/)
 - [Flashing Arduino Firmware](./flashing_motor_ino_to_arduino.md)
 - [Testing and Tuning Guide](./testing_and_tuning.md)
@@ -592,10 +633,4 @@ gzip tinypilot-backup-*.img
 - [Network Map](./network_map.md)
 - [12V Solar System](./12v_solar_system.md)
 - [Raspberry Pi GPIO Pinout](https://pinout.xyz/)
-
-
-## Related Documentation
-
-- [TinyPilot Button Setup](./button_control.md) - Adding GPIO connected buttons for pypilot control
-- [Hardware Review](./hardware_review.md) - Complete hardware overview
-- [Testing and Tuning](./testing_and_tuning.md) - Autopilot configuration
+- [Button Control Setup](./button_control.md)
