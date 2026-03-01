@@ -71,8 +71,8 @@ The system uses a dual-Raspberry Pi architecture combining reliability and funct
 * **WiFi Access Point**: EZR23 4G Router / Mobile hotspot
 * **Network Architecture**: Both Raspberry Pis connect as WiFi clients
 * **IP Addressing**: 
-  + Pi 3B (OpenPlotter): 192.168.20.101 (static)
-  + Pi 4 (Lysmarine): 192.168.20.100 (static)
+  + Pi 3B (OpenPlotter): 192.168.20.100 (static)
+  + Pi 4 (Lysmarine): 192.168.20.101 (static)
 * **Network Name**: YachtArion (configurable)
 
 ### Software
