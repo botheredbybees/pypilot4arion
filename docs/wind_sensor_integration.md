@@ -14,9 +14,41 @@ We use a Software Defined Radio (RTL-SDR) on the Lysmarine Pi 4 to receive the s
 
 ## Software Stack
 
-1.  **rtl_433**: Command-line tool to decode 433MHz signals.
-2.  **Signal K**: The central data hub that converts the `rtl_433` JSON output into standard marine Signal K delta messages.
-3.  **Pypilot**: Consumes Signal K wind data for steering.
+1. **rtl_433**: Command-line tool to decode 433MHz signals and publish to MQTT.
+2. **Mosquitto**: The local MQTT broker acting as the data bus on Arion.
+3. **Signal K**: The central hub using the `MQTT Gateway` and `MQTT Sensors` plugins.
+4. **Node-RED**: Handles unit conversions (e.g., Battery mV to Volts) for precise display.
+5. **Pypilot**: Consumes Signal K wind data for steering.
+
+## Installation & Configuration
+
+### 1. Hardware Setup
+1.  Mount the **WS80** at the masthead or a high, unobstructed location. Align the "North" marker correctly towards the bow.
+2.  Plug the **RTL-SDR USB dongle** into a **USB 2.0 port** (black) on the Pi 4. Avoid USB 3.0 ports (blue), as they generate RF interference that can drown out the 433MHz signal.
+
+### 2. Configure rtl_433 to MQTT
+On the Pi 4, ensure `rtl_433` is broadcasting to the local Mosquitto broker. 
+
+**Test Command:**
+mosquitto_sub -t 'rtl_433/#' -v
+
+### 3. Connect to Signal K (MQTT Bridge)
+We use the **Signal K MQTT Sensors** plugin to map the raw JSON into standard marine paths.
+
+**Plugin Configuration:**
+- **MQTT Topic**: `rtl_433/Fineoffset-WS80/983083`
+- **Mappings**:
+    - `$.wind_avg_m_s` -> `environment.wind.speedApparent` (Unit: m/s)
+    - `$.wind_dir_deg` -> `environment.wind.angleApparent` (Unit: deg)
+    - `$.temperature_C` -> `environment.outside.temperature` (Unit: C)
+
+
+### 4. Battery Monitoring (Node-RED)
+The WS80 reports battery in millivolts (e.g., 3060mV). To prevent Signal K from displaying this as "3060%", use a Node-RED flow to scale the value:
+- **Input**: MQTT Topic `rtl_433/Fineoffset-WS80/983083`
+- **Logic**: `msg.payload.battery_mV * 0.001`
+- **Output**: Signal K path `electrical.batteries.ws80.voltage`
+
 
 ## Installation & Configuration
 
