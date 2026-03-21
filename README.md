@@ -280,8 +280,3 @@ Project status: Hardware installation and initial testing phase (March 2026)
 Maintainer: Peter Shanks (botheredbybees) — Cygnet, Tasmania, Australia
 
 ---
-
-If you want:
-- I can insert the exact compile/build commands and a sample systemd unit for compiled pypilot on the Pi 3B.
-- I can produce a short changelog that lists what changed from HEAD~1 → HEAD → this merged README.
-- I can prepare this README as a branch commit in the repo (Option B) if you'd like me to push it.
