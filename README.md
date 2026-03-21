@@ -1,6 +1,6 @@
 # Pypilot for Arion
 
-Open-source autopilot and integrated marine data network for the 36ft yacht Arion. This README describes the current installation (Tri‑Pi architecture) and retains the detailed wiring, motor controller, and installation guidance from the prior version while adding the updated setup: the Pi 3B now runs the latest Raspbian with a compiled pypilot (not OpenPlotter). It also documents the current 12V → USB cigarette-plug style power supplies in use and the recommended power-stability precautions.
+Open-source autopilot and integrated marine data network for the 36ft pilothouse yacht Arion. This README describes the current installation (Tri‑Pi architecture) and retains the detailed wiring, motor controller, and installation guidance from the prior version while adding the updated setup: the Pi 3B now runs the latest Raspbian with a compiled pypilot (not OpenPlotter). It also documents the current 12V → USB cigarette-plug style power supplies in use and the recommended power-stability precautions.
 
 Last Updated: 2026-03-21  
 Maintainer: Peter Shanks (botheredbybees)  
