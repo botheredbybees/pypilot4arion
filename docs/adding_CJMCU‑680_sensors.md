@@ -7,6 +7,25 @@ We connect it to the **Raspberry Pi 4** that runs SignalK and use a BME680‑awa
 
 ***
 
+## Enabling I2C on the Pi 4
+
+On the RPi 4 that runs SignalK:
+
+```bash
+sudo raspi-config
+```
+
+- Go to **Interfacing Options → I2C → Enable**.
+- Reboot:
+
+```bash
+sudo reboot
+```
+
+Verify that `/dev/i2c-1` exists and `i2cdetect -y 1` shows the sensor address. [demo.signalk](https://demo.signalk.org/documentation/Installation/Raspberry_Pi.html)
+
+***
+
 ## Hardware and Wiring
 
 ### Pinout
@@ -60,28 +79,11 @@ You should see either `0x76` or `0x77` in the table. [itbrainpower](https://itbr
 
 ***
 
-## Enabling I2C on the Pi 4
-
-On the RPi 4 that runs SignalK:
-
-```bash
-sudo raspi-config
-```
-
-- Go to **Interfacing Options → I2C → Enable**.
-- Reboot:
-
-```bash
-sudo reboot
-```
-
-Verify that `/dev/i2c-1` exists and `i2cdetect -y 1` shows the sensor address. [demo.signalk](https://demo.signalk.org/documentation/Installation/Raspberry_Pi.html)
-
-***
-
 ## Installing a SignalK BME680 Plugin
 
 We use the SignalK plugin **`@oehoe83/signalk-raspberry-pi-bme680`**, which is a BME680‑aware variant of the classic `signalk-raspberry-pi-bme280` plugin. [npmjs](https://www.npmjs.com/package/@oehoe83/signalk-raspberry-pi-bme680)
+
+NOTE: if the plugin won't install or run you can create a python script and service instead (see below)
 
 This plugin:
 
@@ -131,6 +133,141 @@ For mapping to SignalK paths:
 OpenPlotter / OpenCPN can then subscribe to these SignalK paths to display cabin environment and barometric trends. [youtube](https://www.youtube.com/watch?v=GTo_DVZ4D6U)
 
 ***
+
+## BME680 Python MQTT bridge and systemd service
+
+If the SignalK plugin is proving difficult the CJMCU‑680 (BME680) in the pilothouse may read by a small Python script on the RPi4, which publishes measurements to the local Mosquitto broker. SignalK ingests these via the `signalk-mqtt-sensors` plugin. [github](https://github.com/rgregg/signalk-mqtt-sensors)
+
+### Python script
+
+Path: `/home/bbb/getBME680data.py`
+
+```python
+#!/usr/bin/env python3
+import json
+import time
+import socket
+import signal
+import sys
+import logging
+
+import board
+import busio
+import adafruit_bme680
+import paho.mqtt.client as mqtt
+
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
+MQTT_TOPIC = "arion/sensors/cabin/bme680"
+MQTT_CLIENT_ID = f"bme680-{socket.gethostname()}"
+I2C_ADDRESS = 0x77
+INTERVAL = 10
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
+running = True
+
+def handle_signal(signum, frame):
+    global running
+    logging.info("Received signal %s, stopping...", signum)
+    running = False
+
+signal.signal(signal.SIGTERM, handle_signal)
+signal.signal(signal.SIGINT, handle_signal)
+
+def main():
+    logging.info("Starting BME680 MQTT publisher")
+
+    i2c = busio.I2C(board.SCL, board.SDA)
+    bme = adafruit_bme680.Adafruit_BME680_I2C(i2c, address=I2C_ADDRESS)
+
+    client = mqtt.Client(client_id=MQTT_CLIENT_ID)
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start()
+
+    try:
+        while running:
+            payload = {
+                "temperature": round(bme.temperature, 2),  # C
+                "humidity": round(bme.humidity, 2),        # %
+                "pressure": round(bme.pressure, 2),        # hPa
+                "gas_ohms": int(bme.gas),                  # Ohms
+            }
+            client.publish(MQTT_TOPIC, json.dumps(payload), qos=0, retain=True)
+            logging.info("Published: %s", payload)
+            time.sleep(INTERVAL)
+    finally:
+        logging.info("Stopping MQTT loop and disconnecting")
+        client.loop_stop()
+        client.disconnect()
+        logging.info("Exiting")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        logging.exception("Fatal error in BME680 publisher: %s", e)
+        sys.exit(1)
+```
+
+This publishes JSON like:
+
+```json
+{"temperature": 19.7, "humidity": 52.4, "pressure": 996.5, "gas_ohms": 7675}
+```
+
+to `arion/sensors/cabin/bme680` on the local broker. [forums.pimoroni](https://forums.pimoroni.com/t/bme680-and-mqtt/19101)
+
+### systemd service
+
+Service file: `/etc/systemd/system/bme680-mqtt.service`
+
+```ini
+[Unit]
+Description=BME680 MQTT publisher
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bbb
+Group=bbb
+WorkingDirectory=/home/bbb
+ExecStart=/usr/bin/python3 /home/bbb/getBME680data.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now bme680-mqtt.service
+sudo systemctl status bme680-mqtt.service
+```
+
+Logs:
+
+```bash
+sudo journalctl -u bme680-mqtt.service -f
+```
+
+### SignalK MQTT mapping
+
+The `signalk-mqtt-sensors` plugin is configured to subscribe to `arion/sensors/cabin/bme680` and map JSON fields into SignalK environment paths. [forum.openmarine](https://forum.openmarine.net/showthread.php?tid=1862)
+
+- `$.temperature` → `environment.inside.cabin.temperature` (C → K)
+- `$.humidity` → `environment.inside.cabin.humidity` (%)
+- `$.pressure` → `environment.inside.cabin.pressure` (hPa → Pa)
+
+The raw `gas_ohms` field is currently kept on MQTT for future use (e.g., trend graphs or Node‑RED processing). [signalk](https://signalk.org/2025/signalk-zigbee-sensors)
+
 
 ## Notes on Interpretation and Safety
 
