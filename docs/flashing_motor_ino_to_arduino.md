@@ -278,9 +278,9 @@ avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x04:m
 # Install screen
 sudo apt install screen
 
-# Connect at 38400 baud (motor.ino default × DIV_CLOCK)
-# For DIV_CLOCK=4 (default): 38400 × 4 = 153600 baud
-screen /dev/ttyUSB0 153600
+# Connect at 38400 baud — hardcoded in motor.ino via Serial.begin(38400)
+# Note: DIV_CLOCK does not apply to this firmware (it only exists in rudderfeedback/rudder.ino)
+screen /dev/ttyUSB0 38400
 
 # You should see periodic binary packets (not human-readable)
 # Press Ctrl+A then K to exit

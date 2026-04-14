@@ -144,7 +144,7 @@ Configuration is in `config.h` (not hardware jumpers — this is the modified ve
 - D9 → IBT-2 RPWM, D10 → LPWM
 - **D6 must be grounded** to select H-bridge mode (IBT-2); floating = RC servo PWM mode
 - Serial protocol: 4-byte packets (cmd, val_lo, val_hi, CRC8)
-- Default baud: 38400 × DIV_CLOCK (DIV_CLOCK=4 → 153600); pypilot `servo.baud` must match
+- Default baud: **38400**, hardcoded via `Serial.begin(38400)` in `motor.ino:130`. pypilot's `servo.py` also hardcodes `[38400]` as its probe baud — no configuration needed and no mismatch risk. Note: `DIV_CLOCK` only exists in `arduino/rudderfeedback/rudder.ino`, not `motor.ino`.
 
 ### web/ — Web Browser Interface (active)
 Flask + gevent-websocket + flask-socketio server. Served by `pypilot_web` on the Pi 3B. Accessed at `192.168.20.100:8000` from any device on the YachtArion network. This is the primary way to monitor and control pypilot on Arion.
@@ -167,7 +167,7 @@ Pypilot stores runtime config in `~/.pypilot/`. Servo parameters set via client 
 ```python
 servo.controller = 'arduino'
 servo.device = '/dev/ttyUSB0'
-servo.baud = 153600          # DIV_CLOCK=4
+servo.baud = 38400           # hardcoded in both motor.ino and servo.py — no config needed
 servo.max_current = 1500     # 15A (units: ×10mA)
 servo.max_controller_temp = 6000  # 60°C (units: 0.01°C)
 ```
@@ -176,5 +176,5 @@ servo.max_controller_temp = 6000  # 60°C (units: 0.01°C)
 
 - **D6 must be grounded** on the Arduino Nano for IBT-2 H-bridge mode. Floating = RC servo output (won't drive pump).
 - **BOD fuses** on ATmega328P must be set (`efuse: 0x04`) to prevent flash corruption in marine power environments.
-- **Baud rate mismatch** (pypilot `servo.baud` vs DIV_CLOCK in firmware) is the most common cause of silent motor failure.
+- **Baud rate** is 38400 on both sides and hardcoded — `Serial.begin(38400)` in `motor.ino` and `[38400]` in `servo.py:590`. No config needed, no mismatch risk. The `DIV_CLOCK` multiplier referenced in the README and docs applies only to `arduino/rudderfeedback/rudder.ino`, not `motor.ino`.
 - IMU calibration is stored persistently; re-calibrate after any physical relocation of the Pi 3B.

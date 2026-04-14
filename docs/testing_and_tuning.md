@@ -37,7 +37,7 @@ This guide covers systematic testing from bench validation through sea trials, f
 
 ```bash
 # Connect Arduino to computer
-screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
+screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not apply to this firmware
 
 # Expected output: Binary telemetry packets every ~100ms
 # Should see periodic data (not human-readable, but regular patterns)
@@ -57,7 +57,7 @@ screen /dev/ttyUSB0 153600  # Adjust baud for your DIV_CLOCK setting
 
 **Troubleshooting:**
 
-- No data: Check baud rate matches motor.ino DIV_CLOCK setting
+- No data: baud rate is hardcoded to 38400 in motor.ino (no DIV_CLOCK) — check USB connection and CH340 driver
 - Garbage data: Wrong baud rate, check USB cable quality
 - CH340 not detected: Install/update CH340 drivers (see installation guide)
 
