@@ -243,32 +243,50 @@ B-  ─────────────────► Negative (common with
 
 ## Part 5: Setting Correct Fuse Bits
 
-The motor.ino README emphasizes brown-out detection (BOD) to prevent flash corruption during power fluctuations - critical in marine environments [arduino/motor/README](https://github.com/botheredbybees/pypilot4arion/blob/main/arduino/motor/README).
+### Why this matters for marine use
 
-### Check Fuse Settings
+The ATmega328P's **Brown-Out Detector (BOD)** monitors supply voltage and holds the chip in reset if it drops below a threshold. Without it, the chip keeps running as voltage sags — and flash memory writes that partially complete before power fails corrupt the firmware page, potentially bricking the Arduino mid-passage.
 
-Using a second Arduino as ISP programmer:
+On a boat, voltage sags are common: the hydraulic pump draws 4–19A on startup, the engine cranks, or corroded terminals cause momentary dips. These are exactly the conditions under which the Arduino may be writing state to flash.
+
+**Most Chinese clone Nanos ship with BOD disabled (`efuse: 0xFF`).** This is the factory default and should be corrected before deploying.
+
+The firmware checks fuse bytes at startup (`motor.ino:114-123`) and sets the `BAD_FUSES` status flag if they are wrong. This is a warning only — the autopilot keeps running — but it indicates the Arduino is unprotected.
+
+### Expected fuse values
+
+| Fuse | Expected value | Purpose |
+|------|---------------|---------|
+| `lfuse` | `0xFF` | Clock: full-speed 16MHz external crystal |
+| `hfuse` | `0xDA` | Boot: enables bootloader + **EESAVE** (preserves EEPROM through chip erase, protecting stored calibration) |
+| `efuse` | `0xFC` (preferred) or `0xFD` | BOD threshold: `0xFC` = 4.3V, `0xFD` = 2.7V |
+
+`0xFC` (4.3V) is preferred for a 5V Arduino on a noisy marine supply — it trips reset earlier, well before flash writes become unreliable. `0xFD` (2.7V) gives more headroom to keep running through brief dips but less protection.
+
+### Check current fuse settings
+
+Using a second Arduino loaded with the ArduinoISP sketch:
 
 ```bash
-# Read current efuse
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -p m328p -U efuse:r:-:h
+# Read all three fuse bytes
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -p m328p \
+  -U lfuse:r:-:h -U hfuse:r:-:h -U efuse:r:-:h
 
-# Expected: 0x04 or 0xFD (BOD enabled)
-# Bad: 0xFF or 0x07 (BOD disabled)
+# Good:  lfuse=0xFF  hfuse=0xDA  efuse=0xFC or 0xFD
+# Bad:   efuse=0xFF (BOD disabled — common on clone Nanos)
 ```
 
-### Set Correct Fuses (If Needed)
+### Set correct fuses
 
 ```bash
-# Low fuse (clock settings)
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:w:0x7f:m
-
-# High fuse (boot settings)  
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U hfuse:w:0xda:m
-
-# Extended fuse (BOD at 4.3V)
-avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U efuse:w:0x04:m
+# Set all three in one command (recommended):
+avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p \
+  -U lfuse:w:0xFF:m \
+  -U hfuse:w:0xDA:m \
+  -U efuse:w:0xFC:m
 ```
+
+**Troubleshooting:** If avrdude returns `stk500_disable(): unknown response=0x12`, try once at 38400 baud (it will fail), then retry the command at 19200 — this is a known quirk with some clone chips and somehow resets the communication state.
 
 ## Part 6: Testing the Installation
 

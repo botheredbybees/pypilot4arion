@@ -175,6 +175,12 @@ servo.max_controller_temp = 6000  # 60°C (units: 0.01°C)
 ## Critical Hardware Notes
 
 - **D6 must be grounded** on the Arduino Nano for IBT-2 H-bridge mode. Floating = RC servo output (won't drive pump).
-- **BOD fuses** on ATmega328P must be set (`efuse: 0x04`) to prevent flash corruption in marine power environments.
+- **BOD fuses** on ATmega328P should be set correctly for marine use. The firmware checks fuse bytes at startup (`motor.ino:114-123`) and sets the `BAD_FUSES` flag (warning only, autopilot keeps running) if they don't match:
+  - `lfuse: 0xFF`, `hfuse: 0xDA`, `efuse: 0xFC` (preferred) or `0xFD`
+  - `hfuse 0xDA` preserves EEPROM through chip erase (protects stored calibration data)
+  - `efuse 0xFC` = BOD at 4.3V (recommended for 5V Arduino on a noisy marine supply); `0xFD` = 2.7V (less protection)
+  - Chinese clone Nanos almost universally ship with BOD disabled (`efuse: 0xFF`) — check before deploying
+  - Fix with: `avrdude -c avrisp -b 19200 -P /dev/ttyUSB0 -u -p m328p -U lfuse:w:0xFF:m -U hfuse:w:0xDA:m -U efuse:w:0xFC:m`
+  - If avrdude gives `stk500_disable(): unknown response=0x12`, try once at 38400 (it will fail) then retry at 19200 — known quirk
 - **Baud rate** is 38400 on both sides and hardcoded — `Serial.begin(38400)` in `motor.ino` and `[38400]` in `servo.py:590`. No config needed, no mismatch risk. The `DIV_CLOCK` multiplier referenced in the README and docs applies only to `arduino/rudderfeedback/rudder.ino`, not `motor.ino`.
 - IMU calibration is stored persistently; re-calibrate after any physical relocation of the Pi 3B.
