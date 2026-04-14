@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The YachtArion pypilot system uses a **Google Pixel 2 Android phone** as a dedicated wireless access point to create a private onboard network. This approach provides a reliable, low-cost networking solution specifically suited for marine environments where traditional WiFi routers may be impractical.
+The YachtArion pypilot system uses a mobile router, but if that failed it could use a **Google Pixel 2 Android phone** as a dedicated wireless access point to create a private onboard network. This approach provides a reliable, low-cost networking solution specifically suited for marine environments where traditional WiFi routers may be impractical.
 
 ### Why Use a Phone as a Hotspot?
 
