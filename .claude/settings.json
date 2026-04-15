@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Python311\\python.exe C:\\Users\\peter_sha\\Documents\\sourcecode\\pypilot4arion\\.claude\\hooks\\check_upstream_edit.py",
+            "statusMessage": "Checking for upstream file edits..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Python311\\python.exe C:\\Users\\peter_sha\\Documents\\sourcecode\\pypilot4arion\\.claude\\hooks\\check_arduino_edit.py",
+            "statusMessage": "Checking for Arduino changes..."
+          }
+        ]
+      }
+    ]
+  }
+}
