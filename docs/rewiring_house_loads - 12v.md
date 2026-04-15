@@ -58,6 +58,10 @@ graph TD
         Inv["Inv 50A"]
         Toilet["Toilet 15A"]
         Troll["Troll 30A"]
+        LVD["LVD Relay<br/>cut 10.5V / reconnect 12.5V"]
+        PiBucks["5V Buck ×2<br/>Pi 3B + Pi 4"]
+        Router["EZR23 Router"]
+        AnchorLight["Anchor Light<br/>(own solar sensor)"]
     end
     
     Solar -->|"8G 60A Fuse"| HouseBat
@@ -77,10 +81,14 @@ graph TD
     BusA --> Lights
     BusA --> Pumps
     BusA --> Fridge
+    BusA -->|"15-20A fused"| LVD
+    LVD --> PiBucks
+    LVD --> Router
     BusB --> Winch
     BusB --> Inv
     BusB --> Toilet
     BusB --> Troll
+    MPPT -->|"Load terminal<br/>LVD-only ~11V"| AnchorLight
     
     StartBus -.-> NegBus
     BusA -.-> NegBus
@@ -96,7 +104,8 @@ graph TD
 | Nav (VHF/GPS) | 25A blade | 4-6 | A |
 | HF Radio | 40A MIDI | 6-10 | Start |
 | Interior Lights | 15A blade | 2-4 | A |
-| Bilge/Water Pumps | 15A blade | 2-4 | A |
+| Bilge Pumps (x2) | 25A inline fuse (each) | 4 | Direct to House Batt — bypasses isolator |
+| Water Pump | 15A blade | 2-4 | A |
 | Solar Charging | 60A MIDI (MPPT) | 8G CCA | HouseMain |
 | Trolling Motor | 30A blade | 4-6 | B |
 | Inverter | 50A MIDI | 10-16 | B |
@@ -135,7 +144,11 @@ graph TD
 
 ## Special Notes
 
+- **Bilge Pumps — direct to House Battery, bypassing isolator**: Both pumps wired directly to the house battery (+) terminal with individual 25A inline fuses, upstream of the house isolator switch. Pumps have isolated positive/negative wiring (no chassis bond). Float switch in positive line handles automatic operation. Wired this way so pumps remain active when the boat is unattended with isolator switches off. House battery chosen over start battery: larger capacity, and a slow overnight leak won't flatten the start battery and leave you unable to crank the engine.
+
 - **No Load Terminals**: The iTechworld MPPT switches the **negative side** of its load output (PWM negative switching). Connecting the Pi/Arduino logic circuit to this creates a ground loop with the Arduino (which references battery negative directly via the IBT-2 motor controller). The USB cable between Pi and Arduino would carry fault current, risking damage to both. MPPT battery output only. [community.victronenergy](https://community.victronenergy.com/t/use-of-load-output-on-mppt-smart-solar/8814)
+
+- **MPPT Load Terminal → Anchor Light (LVD-only mode)**: The anchor light has its own solar sensor managing day/night switching — MPPT dusk-to-dawn mode is redundant. Load terminal set to LVD-only (disconnect ~11V / reconnect ~12.5V) as a battery protection backstop, preventing the anchor light from draining the battery overnight if the sensor fails or the light is left on. Anchor light negative wired exclusively through the MPPT Load− terminal with no other ground connection, so no ground loop risk.
 
 - **Pi Brownout Protection**: With MPPT load terminals unused, the Pis need independent brownout protection for engine cranking, anchor winch, and hydraulic pump events. Solution: (1) a 12V **LVD relay module** (disconnect 10.5V / reconnect 12.5V) inline between Bus A and the 5V buck converters — handles sustained low-voltage during engine cranking; (2) a **3300µF 25V capacitor** on the 12V input of each buck converter — absorbs brief inductive spikes and millisecond dips from pump/winch start/stop. No USB isolation required.
 - **Bilge**: Float direct to HouseMain fused (safety). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/3871842/c1c3d3a9-2d6c-4b59-aa2d-4a2369422331/rewiring_house_loads.md)

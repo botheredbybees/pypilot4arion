@@ -61,10 +61,15 @@ graph TD
         Inverter["1500W Inv<br/>50A"]
         Toilet["Elec Toilet<br/>15A"]
         Trolling["Troll Motor<br/>30A"]
+        AnchorLight["Anchor Light<br/>(own solar sensor<br/>manages day/night)"]
+        LVD["LVD Relay<br/>cut 10.5V / reconnect 12.5V"]
+        PiBucks["5V Buck ×2<br/>Pi 3B + Pi 4"]
+        Router["EZR23 Router"]
     end
 
     Panels -->|"20A Fuse ea.<br/>40A Breaker"| MPPT["New 40A MPPT<br/>12V 100V PV"]
     MPPT -->|"8G CCA 60A Fuse"| HouseBat
+    MPPT -->|"Load Terminal<br/>LVD-only ~11V"| AnchorLight
     Wind -->|"30A Breaker"| PL20["PL20 PWM<br/>20A"]
     PL20 --> StartBat
     Alt --> StartBat
@@ -81,6 +86,9 @@ graph TD
     HouseBusA --> Lights
     HouseBusA --> Pumps
     HouseBusA --> Fridge
+    HouseBusA -->|"15-20A fused"| LVD
+    LVD --> PiBucks
+    LVD --> Router
     HouseBusB --> Winch
     HouseBusB --> Inverter
     HouseBusB --> Toilet
