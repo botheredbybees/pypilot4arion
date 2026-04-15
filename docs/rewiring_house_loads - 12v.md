@@ -135,7 +135,9 @@ graph TD
 
 ## Special Notes
 
-- **No Load Terminals**: Prevents PWM neg switch frying Pypilot/VHF grounds. [community.victronenergy](https://community.victronenergy.com/t/use-of-load-output-on-mppt-smart-solar/8814)
+- **No Load Terminals**: The iTechworld MPPT switches the **negative side** of its load output (PWM negative switching). Connecting the Pi/Arduino logic circuit to this creates a ground loop with the Arduino (which references battery negative directly via the IBT-2 motor controller). The USB cable between Pi and Arduino would carry fault current, risking damage to both. MPPT battery output only. [community.victronenergy](https://community.victronenergy.com/t/use-of-load-output-on-mppt-smart-solar/8814)
+
+- **Pi Brownout Protection**: With MPPT load terminals unused, the Pis need independent brownout protection for engine cranking, anchor winch, and hydraulic pump events. Solution: (1) a 12V **LVD relay module** (disconnect 10.5V / reconnect 12.5V) inline between Bus A and the 5V buck converters — handles sustained low-voltage during engine cranking; (2) a **3300µF 25V capacitor** on the 12V input of each buck converter — absorbs brief inductive spikes and millisecond dips from pump/winch start/stop. No USB isolation required.
 - **Bilge**: Float direct to HouseMain fused (safety). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/3871842/c1c3d3a9-2d6c-4b59-aa2d-4a2369422331/rewiring_house_loads.md)
 - **Torque**: 5Nm lugs; heatshrink all.
 

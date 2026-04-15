@@ -35,8 +35,15 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
 *Reference: [TinyPilot Setup](tinypilot_setup.md)*
 
 ### Critical
-*   [ ] **12V -> 5V Buck Converter (USB Power)**: Dedicated PSU for Pi Zero & Pi 4.
-    *   *Recommendation*: "12V to 5V 3A Micro USB Converter" (Waterproof module).
+*   [ ] **12V -> 5V Buck Converter (USB Power)**: Dedicated PSU for Pi 3B & Pi 4.
+    *   *Recommendation*: "12V to 5V 3A Micro USB Converter" (Waterproof module). One per Pi.
+*   [ ] **Low Voltage Disconnect (LVD) relay module, 10A+**: Inline on the 12V feed to both buck converters.
+    *   *Purpose*: Cuts Pi power cleanly if bus voltage sags below ~10.5V (engine cranking, flat battery). Prevents SD card corruption. Reconnects automatically once voltage recovers to ~12.5V.
+    *   *Recommendation*: Any generic 12V LVD module (AliExpress) rated 10A+. Victron Battery Protect 65A is the marine-grade option.
+    *   *Threshold settings*: Disconnect 10.5V / Reconnect 12.5V (avoids false trips during normal load).
+*   [ ] **Electrolytic capacitor, 2200–4700µF 25V**: Mounted on 12V input of each buck converter.
+    *   *Purpose*: Absorbs brief inductive voltage spikes and millisecond dips from hydraulic pump and anchor winch start/stop. Rides through transients the LVD relay is too slow to handle.
+    *   *Recommendation*: 3300µF 25V electrolytic, low-ESR (Jaycar or element14).
 *   [ ] **Connection Method (GPIO Required)**: Since USB is used for GPS.
     *   **Logic Level Shifter (TXS0108E)**: Bi-directional 3.3V <-> 5V shifter.
     *   *Purpose*: Safety connects Pi Zero GPIO (3.3V) to Arduino RX/TX (5V). Direct connection risks frying the Pi.
