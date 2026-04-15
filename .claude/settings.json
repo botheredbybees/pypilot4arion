@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:\\Python311\\python.exe C:\\Users\\peter_sha\\Documents\\sourcecode\\pypilot4arion\\.claude\\hooks\\check_upstream_edit.py",
+            "command": "/c/python311/python /c/Users/peter_sha/Documents/sourcecode/pypilot4arion/.claude/hooks/check_upstream_edit.py",
             "statusMessage": "Checking for upstream file edits..."
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:\\Python311\\python.exe C:\\Users\\peter_sha\\Documents\\sourcecode\\pypilot4arion\\.claude\\hooks\\check_arduino_edit.py",
+            "command": "/c/python311/python /c/Users/peter_sha/Documents/sourcecode/pypilot4arion/.claude/hooks/check_arduino_edit.py",
             "statusMessage": "Checking for Arduino changes..."
           }
         ]
