@@ -70,7 +70,7 @@ If you want to view autopilot data in Signal K (e.g., for WilhelmSK or a web das
 
 ## Usage Workflow
 
-1.  **Power Up**: Turn on the Pixel 2 Hotspot, then the 24V system (powering both Pis).
+1.  **Power Up**: Turn on the Pixel 2 Hotspot, then the 12V system (powering both Pis).
 2.  **Verify**: Wait for both Pis to boot (~30-60 secs).
 3.  **Navigation**: Launch OpenCPN on the Pi 4.
 4.  **Engage**:

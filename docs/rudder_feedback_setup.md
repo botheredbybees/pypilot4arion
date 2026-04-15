@@ -62,7 +62,7 @@ We will create a **Parallel Signal** setup.
 | Wire Function | TMQ Wire Color | Connect To | Notes |
 | :--- | :--- | :--- | :--- |
 | **Ground** | Blue | **Common Negative Bus** | Shared with Arduino GND & 12V Battery Neg |
-| **Power (+)** | Red | **+5V Regulated Bus** | From 24V->5V Buck Converter. **DO NOT CONNECT TO 12V** |
+| **Power (+)** | Red | **+5V Regulated Bus** | From 12V->5V Buck Converter. **DO NOT CONNECT DIRECTLY TO 12V** |
 | **Signal (Wiper)** | Green | **Arduino Pin A4** | AND connected to Gauge Green wire |
 | **Backlight** | White/Yellow? | **12V Panel Switch** | Only for gauge illumination bulb (if separate) |
 

@@ -27,9 +27,9 @@
 **Symptoms**: No lights, instruments, or autopilot.
 
 ### Diagnosis
-1.  **Check Voltmeter**: Read voltage at the **24V Bus A**.
-    *   *Below 22V*: Battery bank is flat.
-    *   *Normal (24V+)*: Main fuse/breaker has tripped.
+1.  **Check Voltmeter**: Read voltage at the **12V House Bank**.
+    *   *Below 11V*: Battery bank is flat.
+    *   *Normal (12V+)*: Main fuse/breaker has tripped.
 2.  **Check Main Breaker**: Locate the 250A Main Fuse/Breaker near the Battery Bank.
     *   *Tripped?*: Reset ONCE. If it trips immediately, **STOP**. You have a dead short.
     *   *Intact?*: Check main isolation switch.
@@ -42,12 +42,13 @@
 
 If the 12V Start Battery is dead:
 
-### Jump Start Procedure (Hybrid Bridge)
-1.  **Confirm**: 24V House Bank has charge.
-2.  **Engage**: Switch on the **12V Start-Boost DC-DC Converter** (Bridge).
-3.  **Wait**: Allow 5-10 minutes for the Start Battery to surface charge.
-4.  **Disconnect House Loads**: Turn off Fridge, Autopilot, Inverter to maximize available stability.
+### Jump Start Procedure (12V House Bank)
+1.  **Confirm**: 12V House Bank has charge (check voltmeter — above 12V).
+2.  **Disconnect House Loads**: Turn off Fridge, Autopilot, Inverter to maximize available current.
+3.  **Bridge Banks**: If a VSR/combiner is fitted, engage it manually. Otherwise, temporarily connect House Bank (+) to Start Battery (+) with jump leads.
+4.  **Wait**: Allow 2-3 minutes for the Start Battery to surface charge.
 5.  **Crank**: Attempt to start engine.
+6.  **Remove Bridge**: Once engine is running, disconnect jump leads (if used).
 
 ## 4. Fire / Smoke
 

@@ -5,15 +5,10 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
 > [!NOTE]
 > Items marked **[Check Inventory]** may already be in your possession (based on uploaded photos). Please verify before purchasing.
 
-## 1. Power System (24V Hybrid)
-*Reference: [24V Solar Design](24v_solar_system.md)*
-*> ⚠️ **User Purchased Budget Hardware**: See [Hardware Safety Review](hardware_review.md) for critical mitigations for Temu/Generic components.*
+## 1. Power System (12V)
+*Reference: [12V Solar Design](12v_solar_system.md)*
 
 ### Critical
-*   [ ] **12V->24V DC-DC Charger (The Bridge)**: Victron Orion-Tr Smart 12/24-18 Isolated (or Non-Isolated).
-    *   *Purpose*: Charges 24V House bank from 12V Engine Alternator.
-*   [ ] **24V->12V Buck Converter**: 30A-40A isolated converter (Step Down).
-    *   *Note*: You mentioned you have an "old" one. Ensure it provides clean 13.8V output for sensitive electronics.
 *   [ ] **High-Amp Fuse Holders (ANL or MRBF)**:
     *   1x 100A for Trolling Motor.
     *   1x 100A for Solar Bank Main.
@@ -40,8 +35,8 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
 *Reference: [TinyPilot Setup](tinypilot_setup.md)*
 
 ### Critical
-*   [ ] **24V -> 5V Buck Converter (USB Power)**: Dedicated PSU for Pi Zero & Pi 4.
-    *   *Recommendation*: "12V/24V to 5V 3A Micro USB Converter" (Waterproof module).
+*   [ ] **12V -> 5V Buck Converter (USB Power)**: Dedicated PSU for Pi Zero & Pi 4.
+    *   *Recommendation*: "12V to 5V 3A Micro USB Converter" (Waterproof module).
 *   [ ] **Connection Method (GPIO Required)**: Since USB is used for GPS.
     *   **Logic Level Shifter (TXS0108E)**: Bi-directional 3.3V <-> 5V shifter.
     *   *Purpose*: Safety connects Pi Zero GPIO (3.3V) to Arduino RX/TX (5V). Direct connection risks frying the Pi.

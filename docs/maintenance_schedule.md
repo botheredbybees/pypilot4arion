@@ -3,8 +3,8 @@
 Regular maintenance prevents "sudden" failures at sea.
 
 ## Monthly Checks
-*   ** Battery Water**: (If Lead-Acid) Check electrolyte levels in 24V House and 12V Start banks. Top up with distilled water only.
-*   **Voltages**: Log resting voltage of 24V and 12V banks to track health.
+*   ** Battery Water**: (If Lead-Acid) Check electrolyte levels in 12V House and 12V Start banks. Top up with distilled water only.
+*   **Voltages**: Log resting voltage of 12V House and Start banks to track health.
 *   **Bilge Switches**: Lift the float switch manually to verify the pump activates.
 *   **Visual Inspection**: Glance at the **Bus Bars** and **Buck Converters**. Look for:
     *   Discoloration (Heat signs).

@@ -501,7 +501,6 @@ def update_status_leds(self):
 ## Related Documentation
 
 - [TinyPilot Setup](./tinypilot_setup.md) - Main pypilot installation
-- [Hardware Review](./hardware_review.md) - Complete hardware overview
 - [Testing and Tuning](./testing_and_tuning.md) - Autopilot configuration
 
 

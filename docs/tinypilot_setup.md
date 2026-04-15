@@ -136,7 +136,6 @@ sudo i2cdetect -y 1
 
 **Motor Controller Reference**:
 - See [Flashing motor.ino to Arduino](./flashing_motor_ino_to_arduino.md) for complete Arduino setup
-- See [Hardware Review](./hardware_review.md) for IBT-2 wiring to Arduino and hydraulic pump
 
 ## Software Installation
 
@@ -629,7 +628,6 @@ gzip tinypilot-backup-*.img
 - [Pypilot Documentation](https://pypilot.org/)
 - [Flashing Arduino Firmware](./flashing_motor_ino_to_arduino.md)
 - [Testing and Tuning Guide](./testing_and_tuning.md)
-- [Hardware Review](./hardware_review.md)
 - [Network Map](./network_map.md)
 - [12V Solar System](./12v_solar_system.md)
 - [Raspberry Pi GPIO Pinout](https://pinout.xyz/)
