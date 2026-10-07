@@ -48,7 +48,10 @@ There are two independent GPS pucks, so the autopilot does not depend on the hub
  Signal K "Send_Wind_to_Pypilot" --NMEA TCP :20220--> pypilot   (sends Signal K's NMEA output, e.g. wind, to pypilot)
 ```
 
-Heading/rudder reach Signal K **only** through the NMEA link on port 20220. There is no native `pypilot` source for them.
+Heading, rudder and attitude reach Signal K by **two routes** (since 2026-10-08):
+- **Native:** the steering pypilot's own Signal K client (`signalk.enabled`, source `pypilot`, device `pypilot-90687870926`). This needed that device set to **Read/Write** in Signal K (Security -> Devices); it was read-only, so pypilot could listen but not publish, and nothing wrote `navigation.attitude` after the hub's pypilot was disabled. It publishes `navigation.headingMagnetic`, `navigation.attitude` (pitch, roll, yaw), `steering.rudderAngle` and, from its own sensors, position/SOG/COG. Publish period was lowered from 0.1 s to **0.5 s** (`pypilot_client signalk.period=0.5`).
+- **NMEA:** the `Pypilot_Raw_Data` reader on :20220 (HDM, ROT, RSA).
+Signal K priorities prefer native `pypilot`, then `Pypilot_Raw_Data.AP` after 10 s, for `navigation.headingMagnetic` and `steering.rudderAngle`; position/SOG/COG stay `local_gpsd.GN` only (pypilot's own puck does **not** override it, verified). The two routes agree (heading 345.7 deg and identical rudder values on both). InfluxDB still logs both (a few hundred points/min, harmless). The NMEA route is **not an independent fallback**: it uses the same WiFi and the same pypilot process. After granting a device write access, **restart Signal K** so pypilot reconnects; an already-open websocket keeps its old (read-only) permission.
 Keep one reader and one writer on 20220 (see providers below). More than that duplicates every sentence.
 
 ## Wind
@@ -80,7 +83,9 @@ Unplugging the breakout board stops this flow; it does not affect steering.
 **WS80 angle label (checked 2026-10-07).**
 - The flow publishes `wind_dir_deg` x pi/180 as `environment.wind.angleApparent` in the range 0..2pi (272 deg = 4.747 rad). Wind *speed* arrives separately from the `signalk-mqtt-sensors` plugin as `environment.wind.speedApparent`.
 - The label is **correct if the WS80's "N" mark points at the bow**: a fixed anemometer on a moving boat then reads apparent wind, relative to the bow. The WS80 has no moving parts and, as far as we know, no compass, so the angle is relative to the mark, not to north. **Owner confirmed 2026-10-07: aboard Arion it will face forward and turn with the boat**, so `angleApparent` is right. (It is currently on the carport, so readings are relative to wherever it is pointing.) If the mark is later found off the centreline, apply the offset.
-- Signal K's spec gives `angleApparent` as -pi..pi (negative to port). 0..2pi works for pypilot's MWV path, but other consumers may mis-read it; wrapping values above pi (`rad -= 2*pi`) in the Node-RED function is a small fix, not yet made.
+- **Fixed 2026-10-08:** Signal K's spec gives `angleApparent` as -pi..pi (negative to port). The Node-RED function now wraps values above pi (`windRad -= 2*Math.PI`). The 0..2pi range made Grafana's `mean()` return nonsense whenever the wind hovered near 0/360 (the mean of 359 and 1 deg is 180), and it disagreed with pypilot's own republished copy (which was already -pi..pi). The NMEA converter still sends pypilot a 0-360 MWV (its tests: -pi/2 becomes `MWV 270.00`). Backups: `/home/signalk/.signalk/red/flows.json.bak-20261008-071123`, `settings.json.bak-20261008-071123`.
+- **Pypilot republishes wind to Signal K** (source `pypilot`, about 2 points/s) because it receives wind over NMEA (`wind.source = tcp`) and, now it may write, echoes it back. That is the SK -> MWV -> pypilot -> SK loop. Values agree with the original sources (checked after the wrap fix), so both are written to InfluxDB and Grafana averages them. Priorities `signalk-node-red.XX` / `signalk-mqtt-sensors` ahead of `pypilot` were added for `environment.wind.angleApparent` / `speedApparent`, but Signal K still serves the `pypilot` value, so they have **no visible effect**; leave or remove them. Filter a panel with `WHERE "source" = 'signalk-node-red.XX'` if exact sensor values are wanted.
+- **SOG at rest is noisy** (median 0.24 kn, max 0.81 kn over 3 h on the windowsill puck: 3 satellites used, HDOP about 2.9). It is **not** coupled to apparent wind (correlation r = 0.09 with speed, -0.23 with angle before the wrap fix). It does feed pypilot's *true wind* (`truewind.source = gps+wind`) and Signal K's derived true wind. Best fix is the puck's position on the boat; display-level fixes: Grafana value mapping 0-0.5 kn -> 0.0, OpenCPN *Filter NMEA Course and Speed data*.
 - The `signalk-wind-calibration` plugin is configured with the path `"environment.wind.angleApparent "` (**trailing space**) and offset 0, so it matches nothing. Harmless while the offset is 0, but it would silently do nothing if you set an offset. Fix the path before relying on it.
 - Pypilot gets wind via Signal K -> `sk-to-nmea0183` (MWVR/MWVT enabled) -> `Send_Wind_to_Pypilot` -> pypilot :20220 (`wind.source = tcp`).
 
@@ -171,6 +176,7 @@ Always use `/dev/serial/by-id/...`, never `ttyUSB0/1`: the numbers change with p
 | Signal K before priority fix | `/home/signalk/.signalk/settings.json.bak-20261007-171535` | `sudo systemctl stop signalk`, copy back, `sudo systemctl start signalk` |
 | Signal K before provider cleanup | `...settings.json.bak-20261007-171655` | same |
 | Signal K before link consolidation | `...settings.json.bak-20261007-173836` | same |
+| Signal K before heading/rudder priorities | `...settings.json.bak-20261008-070337` | same |
 | gpsd (steering) | `/etc/default/gpsd.bak-20261007`, `.bak2-20261007` | copy back, `sudo systemctl restart gpsd` |
 | OpenCPN | `/home/user/.opencpn/opencpn.conf` | close OpenCPN first; no automatic backup exists |
 | Journal / WiFi / logrotate changes (hub) | `/etc/systemd/journald.conf.d/persistent.conf`, `/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (also on steering), `/root/backup-20261007/logrotate-rsyslog.bak` | delete the drop-ins and restart `systemd-journald` / NetworkManager; restore the logrotate file |
@@ -222,6 +228,8 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 - Hub: one 4 s undervoltage event with the BME680 board disconnected; the board itself is still a suspect for the original boot loop.
 - Upgraded 2026-10-07: Grafana 12.0.0 -> 13.2.3 and InfluxDB 1.11.8 -> 1.13.1 (health ok, Signal K still writing). Pre-upgrade backups on the hub: `/root/backup-20261007/` (`grafana.db`, `etc-grafana/`, `influx/` portable backup ~1.2 GB). 24 other packages are still not upgraded.
 - **Wind Zero keeps dropping off**: outages at about 16:32, 17:07, 18:20, 20:34-20:37 and again after 20:37:35 on 2026-10-07 (see `/var/log/arion/zero-mqtt-events.log` on the hub). While it is down, pypilot loses `wind`/`true wind` modes. It is currently on the carport (WiFi range?) with a cheap 5V supply; cause not yet isolated (power vs WiFi).
-- Wind-calibration plugin's trailing-space path and the 0..2pi angle range: see Wind (mounting reference confirmed).
+- **Grafana "Autopilot State" panel** must read the text field and not filter by time: query `SELECT last("stringValue") FROM "steering.autopilot.state"`, and set the stat panel's *Value options -> Fields* to **All fields** (the default "numeric fields" hides text).
+- The rudder reads about -41 deg (pypilot `rudder.angle` 40.5, `servo.position` 44) on the desk, which is what an unconnected/uncalibrated rudder pot would show. Check the rudder feedback wiring and calibration before relying on the rudder gauge.
+- Wind-calibration plugin's trailing-space path: see Wind (mounting reference confirmed, angle range fixed).
 - `nav` mode needs an APB feed that does not exist yet: see Route following.
 - Duplicate `HDM/ROT/RSA` flows were reduced to one reader; the pypilot -> Signal K path for any other values has not been audited.
