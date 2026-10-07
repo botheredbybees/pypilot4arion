@@ -1,3 +1,5 @@
+> **LEGACY - superseded.** Describes an earlier design (Pixel 2 phone hotspot on `192.168.43.x`, a "Tinypilot" Pi Zero as the pilot computer). The live network is the EZR23 router on `192.168.20.x`: .100 = steering Pi 3B (`arionpypilot`), .101 = hub Pi 4 (`lysmarine`), .102 = wind Pi Zero WX (`arion-wx`); SSH user `bbb`; pypilot web on port 8000; Signal K on port 3000 (hub). See [network_map.md](./network_map.md) and [data_flows.md](./data_flows.md). If the phone hotspot is ever used as a fallback, keep the same host-to-role mapping (steering = .100, hub = .101) on the new subnet; the Tinypilot/.43.x role mapping below is wrong for the current boat.
+
 # Wireless Hotspot Configuration for YachtArion
 
 ## Introduction
@@ -28,16 +30,17 @@ The phone creates a **WiFi hotspot in Infrastructure Mode** (not Ad-Hoc), acting
                     |
     ┌───────────────┴───────────────┐
     |                               |
-RPi Zero W                      RPi 4
-Tinypilot                    Lysmarine
-192.168.43.101              192.168.43.100
-(Autopilot)                 (Navigation)
+RPi 3B (arionpypilot)           RPi 4 (lysmarine)
+[legacy: shown as Tinypilot .101 / Lysmarine .100;
+ current roles: steering = .100, hub = .101]
 ```
 
-**Key Point**: The autopilot system is **network-independent**. The Pi Zero can operate in Compass and GPS modes even if the phone hotspot fails, as it has a dedicated USB GPS receiver. Network connectivity is only required for:
-- Wind mode (receives wind data from Lysmarine via SignalK)
-- NAV mode (receives waypoint data from OpenCPN)
-- Remote monitoring/control via OpenCPN plugin
+**Key Point**: The autopilot system is **network-independent**. The steering node can operate in Compass mode even if the network fails. GPS mode relies on the local gpsd/GPS puck on the steering node (Signal K on the hub is only the fallback source). Network connectivity is only required for:
+- Wind mode (receives wind data from the hub's Signal K)
+- NAV mode (receives waypoint data from the hub)
+- Remote monitoring/control via the pypilot web UI (port 8000)
+
+See [data_flows.md](./data_flows.md) for the actual Signal K / gpsd / OpenCPN data flows.
 
 ## Power Supply Configuration
 
@@ -413,7 +416,7 @@ After configuring both Pis:
    ping 192.168.43.101    # Ping Tinypilot
    ```
 3. From Tinypilot web interface (http://192.168.43.101), verify connection
-4. From OpenCPN on Pi 4, test pypilot plugin connection to 192.168.43.101:20220
+4. From OpenCPN on Pi 4, test connection to the steering node (pypilot web port 8000)
 
 ### Making YachtArion Network Available to Other Devices
 
@@ -437,8 +440,8 @@ The YachtArion hotspot can be extended to other instruments and crew devices:
 
 **Recommended IP Allocation**:
 - `192.168.43.1` - Pixel 2 phone (gateway)
-- `192.168.43.100` - Lysmarine Pi 4 (navigation)
-- `192.168.43.101` - Tinypilot Pi Zero W (autopilot)
+- `192.168.43.100` - Lysmarine Pi 4 (navigation) [legacy; current: hub is .101, steering Pi 3B is .100 on 192.168.20.x]
+- `192.168.43.101` - Tinypilot Pi Zero W (autopilot) [legacy, no longer exists]
 - `192.168.43.102-109` - Crew tablets/phones (DHCP pool)
 - `192.168.43.110-119` - Marine instruments (AIS, wind, depth, etc.)
 - `192.168.43.120-199` - Reserved for future expansion
@@ -658,7 +661,7 @@ The Pixel 2's OLED screen provides an excellent auxiliary display for navigation
 - Adjust heading and tack/jibe commands
 - Monitor rudder angle and motor current
 - **Install from**: https://pypilot.org (APK available)
-- **Connection**: Configure to 192.168.43.101:20220
+- **Connection**: Configure to the steering node on the pypilot server port (23322); legacy address shown here is stale
 
 **OpenCPN Pypilot Plugin** (via OpenCPN Android)
 - Control autopilot within OpenCPN interface
@@ -726,8 +729,8 @@ The Pixel 2's OLED screen provides an excellent auxiliary display for navigation
 - User-friendly SSH terminal
 - Saved connections and port forwarding
 - **Configure profiles**:
-  - Tinypilot: `ssh pi@192.168.43.101`
-  - Lysmarine: `ssh pi@192.168.43.100`
+  - Steering node: `ssh bbb@<steering IP>` (192.168.20.100 on the EZR23 network)
+  - Lysmarine hub: `ssh bbb@<hub IP>` (192.168.20.101 on the EZR23 network)
 - **Use case**: System monitoring, log checks, troubleshooting
 
 **VNC Viewer** (remote desktop)

@@ -1,3 +1,5 @@
+> **LEGACY - superseded.** Describes an earlier design (OpenPlotter image on the pilot Pi, hostname `tinypilot`, home WiFi `192.168.1.x`, solenoid H-bridge). The steering node is now `arionpypilot` (Pi 3B, Debian 13, 192.168.20.100) running pypilot from this repo with the web UI on port 8000; the hub (`lysmarine`, 192.168.20.101) runs Signal K/OpenCPN. See [data_flows.md](./data_flows.md) and [network_map.md](./network_map.md). Do not follow the OpenPlotter install steps on the current boat. The pin/driver details below are also stale: the motor is an IBT-2 H-bridge driven by the Arduino Nano (D9 -> RPWM, D10 -> LPWM, D6 grounded), not solenoids, and `pypilot_boatimu` conflicts with `pypilot` (run one, not both).
+
 
 
 The documentation is still not right. You are putting the boat imu system start before the imu connection. You also have a Hydraulic Pump Configuration (4-Solenoid H-Bridge) which is not right. These solenoids are being replaced with pwm motor driver
@@ -14,7 +16,7 @@ You're absolutely right - let me fix the documentation **exactly** as it should 
 ## 1. Flash & Boot
 ```
 Raspberry Pi Imager → OpenPlotter Starting 4.x.x
-├── Hostname: tinypilot
+├── Hostname: arionpypilot
 ├── WiFi: flow/password  
 ├── SSH enabled
 └── 16GB SD card
@@ -59,7 +61,7 @@ sudo systemctl status pypilot*
 
 ## 6. Web Interface
 ```
-http://192.168.1.183
+http://192.168.20.100:8000
 # IMU data + servo controls visible
 ```
 
@@ -82,7 +84,7 @@ pypilot Web → Configuration → Servo:
 ├── servo.mode: pwm
 ├── Pins:
 │   ├── pwm: D9 (IBT-2 RPWM)
-│   ├── dir: D8 (IBT-2 LPWM) 
+│   ├── dir: D10 (IBT-2 LPWM) 
 │   └── rudder_feedback: A0
 ├── servo.max_current: 20
 └── Test rudder movement
@@ -153,13 +155,13 @@ Citations:
 ```
 Raspberry Pi Imager → OpenPlotter Starting (4.x.x)
 Settings (gear icon):
-├── Hostname: tinypilot
+├── Hostname: arionpypilot
 ├── Username: bbb  
 ├── WiFi: flow SSID/password
 └── Enable SSH
 ```
 
-**Boot Pi 3B** → SSH: `ssh bbb@192.168.1.183`
+**Boot Pi 3B** → SSH: `ssh bbb@192.168.20.100`
 
 ## 2. Install pypilot App
 
@@ -220,8 +222,8 @@ journalctl -u pypilot_boatimu -f
 ## 6. Web Interface
 
 ```
-http://192.168.1.183
-# or http://tinypilot.local
+http://192.168.20.100:8000
+# or http://arionpypilot.local:8000
 ```
 
 ## 7. Arduino Motor Controller Setup
@@ -235,7 +237,7 @@ http://192.168.1.183
    └── Test connection
 ```
 
-## 8. Hydraulic Pump Configuration (4-Solenoid H-Bridge)
+## 8. Hydraulic Pump Configuration (4-Solenoid H-Bridge) - WRONG for Arion, superseded by IBT-2 PWM section above
 
 ```
 pypilot Web → Configuration → Servo:
@@ -263,7 +265,7 @@ $ sudo systemctl start pypilot pypilot_web  # Run without IMU
 
 Web not loading:
 $ sudo systemctl status pypilot_web
-$ curl -I http://localhost:8080
+$ curl -I http://localhost:8000
 ```
 
 ## Expected Status (All Green)

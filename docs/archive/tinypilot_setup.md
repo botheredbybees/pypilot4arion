@@ -1,3 +1,6 @@
+> **LEGACY - superseded.** Describes the earlier TinyPilot (Pi Zero) design. Current architecture: see docs/data_flows.md.
+> The pilot computer is now the **Steering node** (`arionpypilot`, Pi 3B, 192.168.20.100, web UI on port 8000, pypilot installed system-wide via `setup.py`, not pipx). The hub (Pi 4, 192.168.20.101) runs Signal K and must keep its own local pypilot disabled. The Pi Zero (192.168.20.102) is the wind bridge only: do not flash or unlock it with these steps. IP addresses and hostnames below have been corrected; hardware, power and wiring details are original and unverified.
+
 # TinyPilot Setup & Configuration
 
 ## Overview
@@ -14,7 +17,7 @@ The TinyPilot Pi handles:
 4. Providing web interface for autopilot control
 5. Publishing autopilot data via TCP for Signal K integration
 
-It functions independently of the navigation computer (Lysmarine Pi 4), ensuring you still have steering even if the main computer fails.
+It functions independently of the navigation computer (Lysmarine Pi 4, the hub), ensuring you still have steering even if the main computer fails.
 
 ## Core Logic & Functionality
 
@@ -47,14 +50,14 @@ The TinyPilot Pi Zero is powered via a **12V to 5V Buck Converter** connected to
 The TinyPilot Pi is configured with a **static IP address** on the YachtArion network:
 
 - **SSID**: `YachtArion` (EZR23 4G Router)
-- **IP Address**: `192.168.20.101` (static)
+- **IP Address**: `192.168.20.100` (static)
 - **Gateway**: `192.168.20.1` (EZR23 Router)
 - **DNS**: `8.8.8.8`, `1.1.1.1`
 - **Subnet**: `255.255.255.0` (/24)
 
 This static IP makes it easy to:
-- Access the web interface at `http://192.168.20.101`
-- Configure Signal K to connect at `192.168.20.101:20220`
+- Access the web interface at `http://192.168.20.100:8000`
+- Configure Signal K to connect at `192.168.20.100:20220`
 - Swap failed hardware with pre-configured replacement Pis
 
 ## Installation Hardware Setup
@@ -146,7 +149,7 @@ sudo i2cdetect -y 1
    - Select "Raspberry Pi OS Lite (64-bit)" or "Raspberry Pi OS Lite (32-bit)" for original Pi Zero W
 
 2. **Configure OS settings** in Imager (gear icon):
-   - Set hostname: `tinypilot`
+   - Set hostname: `arionpypilot`
    - Enable SSH
    - Set username/password (e.g., `bbb` / strong password)
    - Configure WiFi: SSID `YachtArion`, password, country AU
@@ -158,7 +161,7 @@ sudo i2cdetect -y 1
 
 ```bash
 # SSH into Pi (will initially have DHCP address)
-ssh bbb@tinypilot.local
+ssh bbb@arionpypilot.local
 # or find DHCP address and: ssh bbb@192.168.20.x
 
 # Update system
@@ -189,10 +192,10 @@ sudo reboot
 
 ```bash
 # SSH back in
-ssh bbb@tinypilot.local
+ssh bbb@arionpypilot.local
 
 # Configure static IP using nmcli
-sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.101/24
+sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.100/24
 sudo nmcli con mod "YachtArion" ipv4.gateway 192.168.20.1
 sudo nmcli con mod "YachtArion" ipv4.dns "8.8.8.8 1.1.1.1"
 sudo nmcli con mod "YachtArion" ipv4.method manual
@@ -201,7 +204,7 @@ sudo nmcli con up "YachtArion"
 # Verify configuration
 ip addr show wlan0
 ping 192.168.20.1
-ping 192.168.20.100  # Test Lysmarine connectivity
+ping 192.168.20.101  # Test hub (Lysmarine) connectivity
 ping google.com      # Test internet via 4G
 
 # Reboot and verify IP persists
@@ -214,7 +217,7 @@ sudo nano /etc/dhcpcd.conf
 
 # Add at end:
 interface wlan0
-static ip_address=192.168.20.101/24
+static ip_address=192.168.20.100/24
 static routers=192.168.20.1
 static domain_name_servers=8.8.8.8 1.1.1.1
 
@@ -235,8 +238,8 @@ sudo systemctl restart dhcpcd
 > **Why pipx?** Modern Raspberry Pi OS uses "externally-managed-environment" which blocks direct `pip install` commands. Using `pipx` creates isolated environments for each application, avoiding conflicts and system breakage.
 
 ```bash
-# SSH to tinypilot
-ssh bbb@192.168.20.101
+# ssh to arionpypilot
+ssh bbb@192.168.20.100
 
 # Clone the MAIN pypilot repository
 cd ~
@@ -349,7 +352,7 @@ sudo systemctl status pypilot_web.service
 From any device on the YachtArion network:
 
 ```
-http://192.168.20.101
+http://192.168.20.100:8000
 ```
 
 You should see the pypilot web interface.
@@ -450,7 +453,7 @@ Complete testing and tuning procedures are detailed in:
 ### Quick Dockside Test
 
 1. **Web Interface Access**:
-   - Open `http://192.168.20.101`
+   - Open `http://192.168.20.100:8000`
    - Verify interface loads and shows sensor data
 
 2. **Manual Control**:
@@ -511,14 +514,14 @@ pipx install pypilot
 
 ```bash
 # Verify Pi is on network
-ping 192.168.20.101
+ping 192.168.20.100
 
 # Check web service status
-ssh bbb@192.168.20.101
+ssh bbb@192.168.20.100
 sudo systemctl status pypilot_web.service
 
 # Check if web service is listening
-sudo netstat -tlnp | grep 80
+sudo netstat -tlnp | grep 8000
 
 # View logs
 sudo journalctl -u pypilot_web.service -f
@@ -616,7 +619,7 @@ gzip tinypilot-backup-*.img
 **Prepare spare SD card**:
 1. Image new card with Raspberry Pi OS Lite
 2. Follow installation steps above
-3. Configure static IP `192.168.20.101`
+3. Configure static IP `192.168.20.100`
 4. Label card "TinyPilot Spare - .101"
 5. Test boot and network connectivity
 6. Store in waterproof case

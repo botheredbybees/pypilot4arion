@@ -1,5 +1,7 @@
 # pilothouse_nav_panel_plan.md
 
+> **Note - plan predates the current network.** The pilot computer is the Steering Pi 3B (`arionpypilot`, 192.168.20.100), not a "TinyPilot Pi Zero"; the Pi Zero (192.168.20.102) is the wind bridge. The WiFi AP is the EZR23 router (192.168.20.1), not a Pixel2 hotspot at 192.168.43.1. Panel layout, power and fuse figures below are unchanged and unverified. See docs/data_flows.md.
+
 ## Panel Overview
 New **12V pilothouse navigation panel** (12mm marine plywood, **700mm W x 500mm H x 25mm D frame**) mounts flush/angled on console bulkhead, replacing Navman 5600. Houses iTechworld MPPT (solar monitoring), RPi4 Lysmarine (15" OpenCPN nav screen), TinyPilot Pi0, IBT-2 ctrl, Pixel2 hotspot. Local 12V bus fed from house (16mm²), 5V bucks for Pis/phone. Coordinates: **Top-left corner (0,0)** at upper-left mounting hole; X right, Y down. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/images/3871842/0c96d063-151f-4586-bb71-8744763bca3d/PXL_20260121_003049784.jpg)
 
