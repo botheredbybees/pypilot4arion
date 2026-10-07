@@ -130,6 +130,9 @@ Always use `/dev/serial/by-id/...`, never `ttyUSB0/1`: the numbers change with p
 ## Remote access
 
 - Hub on Tailscale: `100.123.233.82` (account botheredbybees@), `--ssh`, subnet router `192.168.20.0/24`.
+  The route was **approved in the admin console and key expiry disabled on 2026-10-07**. Clients must accept routes
+  (`sudo tailscale set --accept-routes` on Linux; "Use Tailscale subnets" on Android). Verified from the laptop on a different network:
+  `192.168.20.100:8000` (pypilot web UI) and `192.168.20.101:3000` (Signal K) load, and `.100/.101/.102` answer pings.
   Tailscale SSH asks for a one-off browser approval link; approve it once and sessions work for a while.
 - Reach the other Pis by jumping through the hub:
   `ssh -o ProxyCommand="ssh -W %h:%p bbb@100.123.233.82" bbb@192.168.20.100`
@@ -189,6 +192,6 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 - Steering node WiFi: ping varies from about 5 ms to 400 ms and dropped once. Fix before relying on it at sea.
 - Wind node reboots (about 16:32, 17:07, 18:20 on 2026-10-07), cause unknown.
 - Hub: one 4 s undervoltage event with the BME680 board disconnected; the board itself is still a suspect for the original boot loop.
-- InfluxData and Grafana apt keys; confirm the Tailscale `192.168.20.0/24` route is approved in the admin console.
+- InfluxData and Grafana apt keys need refreshing.
 - Node-RED labels the WS80 direction `angleApparent`; confirm the reference (see Wind) before trusting wind mode.
 - Duplicate `HDM/ROT/RSA` flows were reduced to one reader; the pypilot -> Signal K path for any other values has not been audited.
