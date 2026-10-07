@@ -7,9 +7,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a fork of the open-source [pypilot](https://github.com/pypilot/pypilot) autopilot (GPLv3, by Sean D'Epagnier), customized for SY Arion — a 36ft pilothouse yacht. Most Python source files are upstream pypilot code. Arion-specific work lives in `docs/`, `scripts/`, and the locally-modified `arduino/motor/` firmware.
 
 **Three-node architecture:**
-- **Steering Node (Pi 3B, 192.168.20.100):** pypilot server, ICM-20948 IMU, USB GPS, Arduino Nano motor controller via `/dev/ttyUSB0`
-- **Hub Node (Pi 4, 192.168.20.101):** Signal K, InfluxDB, Grafana, OpenCPN
-- **Wind Bridge (Pi Zero WX):** Ecowit WS80 ultrasonic wind sensor via rtl_433 → MQTT → Signal K
+- **Steering Node (Pi 3B, `arionpypilot`, 192.168.20.100):** Debian 13, pypilot 0.60, ICM-20948 IMU, Arduino Nano motor controller (FTDI, usually `/dev/ttyUSB0`), second USB GPS puck read by gpsd (`/dev/serial/by-id/...`, `gps.source = gpsd`). Web UI port 8000.
+- **Hub Node (Pi 4, `lysmarine`, 192.168.20.101):** Lysmarine (Debian 12), Signal K (port 3000), Mosquitto, InfluxDB, Grafana, OpenCPN (runs as user `user`, not `bbb`), gpsd + first GPS puck, Tailscale.
+- **Wind Bridge (Pi Zero WX, `arion-wx`, 192.168.20.102):** Ecowit WS80 via rtl_433 → MQTT (hub Mosquitto) → Signal K. **Read-only overlayroot filesystem**: changes, logs and SSH keys are lost at reboot by design; password login only; do not unlock it unless asked.
+
+**Read `docs/data_flows.md` before touching Signal K, gpsd, OpenCPN or any GPS/position path.** It records the verified data flows and the traps below.
+
+**Do-not-regress rules (learned 2026-10-07):**
+- The hub's own pypilot (`pypilot@pypilot`, `pypilot_web`, `pypilot_detect` — installed by Lysmarine) stays **disabled**. It competed with the real pypilot as a Signal K position source.
+- Signal K position/SOG/COG priority is `local_gpsd.GN` only. The puck reports the GN talker; naming `local_gpsd.GP` silently never matches.
+- On the steering node gpsd runs with `USBAUTO="false"` so it cannot grab the Arduino's serial port. Always use `/dev/serial/by-id/...` paths, never `ttyUSB0/1`.
+- OpenCPN config is `/home/user/.opencpn/opencpn.conf` (OpenCPN rewrites it on exit — edit only while closed).
+- Signal K `settings.json` (`/home/signalk/.signalk/`) can be overwritten while the server runs: stop `signalk`, edit with a backup, start it.
+- Node-RED is not a separate service: it is the `signalk-node-red` plugin inside Signal K (flows in `/home/signalk/.signalk/red/flows.json`); it converts the WS80 and BME680 MQTT data into Signal K deltas.
+- Secrets (WiFi password, Pi login, IPs) live in `.env` (git-ignored). Never print or commit its values.
+- Remote access: Tailscale to the hub (`100.123.233.82`, Tailscale SSH needs a browser approval), then jump to `.100` / `.102`. See `docs/data_flows.md`.
 
 ## Build & Install
 

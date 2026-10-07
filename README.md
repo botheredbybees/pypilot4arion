@@ -2,9 +2,11 @@
 
 Open-source autopilot and integrated marine data network for the 36ft pilothouse yacht Arion. This README describes the current installation (Tri‑Pi architecture) and retains the detailed wiring, motor controller, and installation guidance from the prior version while adding the updated setup: the Pi 3B now runs the latest Raspbian with a compiled pypilot (not OpenPlotter). It also documents the current 12V → USB cigarette-plug style power supplies in use and the recommended power-stability precautions.
 
-Last Updated: 2026-03-21  
+Last Updated: 2026-10-07  
 Maintainer: Peter Shanks (botheredbybees)  
 Location: Cygnet, Tasmania, Australia
+
+> **How data moves between the nodes (GPS, Signal K, OpenCPN, gpsd, remote access, rollback):** see [docs/data_flows.md](docs/data_flows.md). It is the authoritative reference and was verified on the live system on 2026-10-07. Older docs in `docs/` that describe OpenPlotter, the TinyPilot Pi Zero, or `192.168.43.x` addresses are legacy.
 
 ---
 
@@ -25,15 +27,17 @@ Design goal: separate responsibilities across three nodes so navigation or senso
 
 ## High-level Architecture
 
-- Steering Node (Pi 3B): pypilot server, IMU, local USB GPS, serial to Arduino motor controller.
-- Analysis / Hub Node (Pi 4): Signal K master, InfluxDB, Grafana, OpenCPN charting, rtl_433 or MQTT bridges.
-- Wind Bridge (Pi Zero WX): solar-powered remote node for Ecowit WS80, rtl_433 → MQTT/Signal K.
+- Steering Node (Pi 3B): pypilot server, IMU, its own USB GPS puck (read by gpsd), serial to Arduino motor controller.
+- Analysis / Hub Node (Pi 4): Signal K master, Mosquitto (MQTT), InfluxDB, Grafana, OpenCPN charting, gpsd with a second GPS puck, Tailscale for remote access.
+- Wind Bridge (Pi Zero WX): solar-powered remote node for Ecowit WS80, rtl_433 → MQTT (to the hub's Mosquitto) → Signal K. Runs a **read-only root filesystem** (overlayroot).
 
 Network:
-- SSID: YachtArion (EZR23 4G Router or equivalent)
-- Pi 4 (Hub): 192.168.20.101
-- Pi 3B (Pilot): 192.168.20.100
-- Pi Zero (Wind): client to Hub (MQTT/Signal K)
+- SSID: YachtArion (EZR23 4G Router, 192.168.20.1)
+- Pi 3B (Steering, `arionpypilot`): 192.168.20.100 — pypilot web UI on port 8000
+- Pi 4 (Hub, `lysmarine`): 192.168.20.101 — Signal K on port 3000
+- Pi Zero WX (Wind, `arion-wx`): 192.168.20.102 — client to the hub's MQTT broker
+
+Two GPS pucks: one on the hub (feeds Signal K and OpenCPN), one on the steering node (feeds pypilot directly, so steering does not depend on the hub or WiFi for position).
 
 ---
 
@@ -51,6 +55,7 @@ Recommendations and cautions:
   - Add a small LC/R-C filter or ferrite on the IMU/I2C power lines if you see noise.
   - If you observe IMU anomalies (heading jumps, poor calibration), switch the Pi 3B supply to a dedicated buck converter or an isolated 5V regulator and re-check.
 - Always fuse the IBT-2 main supply (30A inline fuse close to battery) regardless of the Pi supply method.
+- Observed 2026-10-07: the hub logged a kernel `Undervoltage detected!` event (`throttled=0x50000`) and the wind Zero restarted without a clean shutdown several times. The 5V converters feeding them are the prime suspect. The hub also powers a USB SATA SSD from its own 5V rail, which is a heavy load for a marginal supply. Check `vcgencmd get_throttled` (healthy is `0x0`) after any supply change.
 
 (If you want, I can add a short recommended parts list of proven 12V→5V converters and USB adapters.)
 
@@ -59,20 +64,25 @@ Recommendations and cautions:
 ## Technology Stack — Hardware (detailed)
 
 ### Steering Node (Pi 3B; now Raspbian + compiled pypilot)
-- Raspberry Pi 3B running latest Raspbian (Bullseye/Bookworm as appropriate). Pypilot compiled from source for better integration and performance.
+- Raspberry Pi 3B running Debian 13 (trixie) with pypilot 0.60 (installed under `/usr/local`, services `pypilot` and `pypilot_web`).
 - IMU: ICM-20948 (I2C @ 0x68) connected directly to Pi GPIO (3.3V).
 - Motor controller: Arduino Nano (motor.ino).
 - H-Bridge driver: IBT-2 (BTS7960B) driving Octopus 1012 hydraulic pump.
-- USB GPS: NMEA 0183 (local USB connected to Pi 3B).
+- USB GPS: NMEA 0183, 4800 baud (Prolific USB-serial), read by `gpsd` through its stable `/dev/serial/by-id/...` path. pypilot uses it as `gps.source = gpsd` and falls back to Signal K if it drops. gpsd runs with `USBAUTO="false"` so it never grabs the Arduino's serial port.
 - Power: 12V ship supply → 12V→USB adapter for Pi (see power notes above) OR dedicated buck converter for best stability.
 
 ### Hub / Analysis Node (Pi 4)
 - Raspberry Pi 4 (8GB), 512GB SSD (InfluxDB writes), Argon ONE V2 case.
-- Lysmarine / OpenCPN / Signal K / Grafana stack. RTL-SDR + rtl_433 for wireless sensors (WS80), or run rtl_433 on Wind Bridge.
+- Lysmarine (Debian 12) / OpenCPN / Signal K / Mosquitto / InfluxDB / Grafana stack, root filesystem on the USB SATA SSD.
+- OpenCPN runs as the desktop user `user` (config in `/home/user/.opencpn/`), not as `bbb`.
+- GPS puck #1 on `/dev/ttyUSB0` via gpsd; Signal K takes position from the `local_gpsd.GN` source only.
+- Lysmarine also installs its own local pypilot (`pypilot@pypilot`, `pypilot_web`, `pypilot_detect`). **These stay disabled**: the real pypilot is on the steering node, and the hub copy competed as a second position source.
+- Remote access via Tailscale (`100.123.233.82`), also a subnet router for 192.168.20.0/24.
 
 ### Wind Bridge (Pi Zero WX)
-- Pi Zero WX (solar remote).
-- Ecowit WS80 ultrasonic sensor via 433MHz RF decoded by rtl_433 → MQTT / Signal K.
+- Pi Zero WX (solar remote), `arion-wx` at 192.168.20.102.
+- Ecowit WS80 ultrasonic sensor via 433MHz RF decoded by `rtl_433` on this Pi → MQTT (`rtl_433/arion-wx/events`) on the hub's Mosquitto → Signal K.
+- Root filesystem is a read-only overlay (changes, logs and SSH keys are lost at every reboot, by design). Log in with the password, not a key. Its restart history is kept on the hub in `/var/log/arion/zero-mqtt-events.log`.
 
 ---
 
@@ -218,14 +228,14 @@ Key highlights preserved:
 
 ## Repository contents (high level)
 
-- /docs/ — flashing_motor_ino_to_arduino.md, openplotter_setup.md (kept for reference), testing_and_tuning.md, wind_sensor_integration.md, etc.
+- /docs/ — flashing_motor_ino_to_arduino.md, archive/openplotter_setup.md (archived, legacy), testing_and_tuning.md, wind_sensor_integration.md, etc.
 - /arduino/motor/ — motor.ino, crc.h, Makefile
 - /config/ — sample pypilot config
 - /scripts/ — diagnostics utilities
 - /hardware/ — wiring and datasheets
 - /calibration/ — PID tuning and calibration logs
 
-Note: openplotter_setup.md remains in /docs for historical reference, but the current Steering Node workflow uses Raspbian + compiled pypilot. The Navigation/HUB node may still run Lysmarine / OpenPlotter style setups if you prefer.
+Note: openplotter_setup.md is archived in /docs/archive for historical reference only. The Steering Node runs Debian + pypilot; the Hub runs Lysmarine (not OpenPlotter). See [docs/data_flows.md](docs/data_flows.md) for how they fit together.
 
 ---
 
@@ -255,7 +265,7 @@ Note: openplotter_setup.md remains in /docs for historical reference, but the cu
 
 ## Alternative configurations / notes
 
-- Pi Zero W trial documented in docs/tinypilot_setup.md — not recommended for production due to CPU and environment complexity. Retained for reference.
+- Pi Zero W trial documented in docs/archive/tinypilot_setup.md — not recommended for production due to CPU and environment complexity. Legacy; the Pi Zero WX is now the wind bridge only.
 
 ---
 
