@@ -21,6 +21,8 @@ This document describes the Claude Code automations configured for this reposito
 
 Hooks run automatically when Claude uses certain tools. No manual invocation needed.
 
+> **Note:** the checked-in `.claude/settings.json` and `.mcp.json` currently use Windows paths (`/c/python311/python`, `cmd /c npx`). On a Linux workstation these fail (the MCP servers show as failed to connect) and need Linux equivalents.
+
 The hook logic lives in Python scripts under `.claude/hooks/` and is called with the full Python path (`C:\Python311\python.exe`). This avoids the bash syntax that fails in Windows CMD. Claude Code pipes tool input as JSON to each script's stdin; the script prints a JSON `systemMessage` if the condition matches, or exits silently.
 
 ### 1. Upstream file warning (PreToolUse)
@@ -72,7 +74,7 @@ or run make upload on Pi 3B (192.168.20.100).
 **What it does:** Prints the full deploy procedure for pushing changes to the steering node Pi 3B at `192.168.20.100`:
 
 ```
-1. SSH to the Pi 3B:    ssh pi@192.168.20.100
+1. SSH to the Pi 3B:    ssh bbb@192.168.20.100
 2. Pull latest:         cd ~/pypilot4arion && git pull
 3. Install package:     sudo python3 setup.py install
 4. Restart service:     sudo systemctl restart pypilot

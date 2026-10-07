@@ -1,5 +1,7 @@
 # Network & Data Topology Map
 
+> Verified 2026-10-07: .100 = steering Pi 3B (`arionpypilot`), .101 = hub Pi 4 (`lysmarine`), .102 = wind Pi Zero WX (`arion-wx`). SSH user is `bbb` on all Pis. Signal K / gpsd / OpenCPN data-flow details: see [data_flows.md](./data_flows.md).
+
 ## Physical Network
 *   **SSID**: `YachtArion`
 *   **Gateway / AP**: EZR23 4G Router (192.168.20.1)
@@ -13,8 +15,9 @@
 | Device | IP Address | Configuration Method | Role |
 | :--- | :--- | :--- | :--- |
 | **EZR23 Router** | `192.168.20.1` | Router default | Gateway / DHCP Server / 4G Internet / WiFi AP |
-| **Lysmarine** | `192.168.20.100` | Static on Pi | Navigation / OpenCPN / Signal K Server |
-| **TinyPilot** | `192.168.20.101` | Static on Pi | Autopilot Core / Motor Control |
+| **Steering node** (`arionpypilot`, Pi 3B) | `192.168.20.100` | Static on Pi | pypilot server + web UI / IMU / Arduino motor controller / second GPS puck |
+| **Hub** (`lysmarine`, Pi 4) | `192.168.20.101` | Static on Pi | Signal K / Mosquitto / InfluxDB / Grafana / OpenCPN / gpsd + first GPS puck / Tailscale |
+| **Wind bridge** (`arion-wx`, Pi Zero WX) | `192.168.20.102` | Static on Pi | Ecowitt WS80 via rtl_433 -> MQTT (read-only overlayroot) |
 | **User Laptop**| DHCP (50-150) | DHCP | Configuration / Monitoring |
 | **Tablet/Phone**| DHCP (50-150) | DHCP | Remote Display / Control |
 
@@ -25,12 +28,15 @@
 | Service | Port | Host | Address | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | **Router Admin** | `80` | EZR23 | `http://192.168.20.1` | Router configuration interface |
-| **Signal K Admin** | `3000` | Lysmarine | `http://192.168.20.100:3000` | Sensor Dashboard & Config |
-| **OpenCPN** | `None` | Lysmarine | Local display only | Navigation/Charting Software |
-| **Pypilot Web** | `80` | TinyPilot | `http://192.168.20.101` | Autopilot Web UI |
-| **Pypilot Control**| `20220` | TinyPilot | `192.168.20.101:20220` | JSON Control API (OpenCPN Plugin) |
-| **SSH** | `22` | Both Pis | `ssh pi@192.168.20.10x` | Remote Command Line |
-| **VNC** | `5900` | Lysmarine | `192.168.20.100:5900` | Remote Desktop to Chartplotter |
+| **Signal K Admin** | `3000` | Hub (lysmarine) | `http://192.168.20.101:3000` | Sensor Dashboard & Config |
+| **Signal K NMEA0183 out** | `10110` | Hub (lysmarine) | `192.168.20.101:10110` | NMEA TCP output |
+| **Mosquitto MQTT** | `1883` | Hub (lysmarine) | `192.168.20.101:1883` | Wind bridge publishes here |
+| **OpenCPN** | `None` | Hub (lysmarine) | Local display only | Navigation/Charting Software (runs as desktop user `user`, reads gpsd 127.0.0.1:2947) |
+| **Pypilot Web** | `8000` | Steering (arionpypilot) | `http://192.168.20.100:8000` | Autopilot Web UI |
+| **pypilot server** | `23322` | Steering (arionpypilot) | `192.168.20.100:23322` | pypilot internal pub/sub bus |
+| **pypilot NMEA** | `20220` | Steering (arionpypilot) | `192.168.20.100:20220` | NMEA TCP (read by Signal K `Pypilot_Raw_Data`) |
+| **SSH** | `22` | All Pis | `ssh bbb@192.168.20.10x` | Remote Command Line |
+| **VNC** | `5900` | Hub (lysmarine) | `192.168.20.101:5900` | Remote Desktop to Chartplotter (unverified) |
 
 ## Router Configuration
 
@@ -58,8 +64,8 @@ All devices powered from **House Bus A** via individual fused circuits:
 | Device | Input Voltage | Buck Converter | Fuse Size | Wire Gauge |
 | :--- | :--- | :--- | :--- | :--- |
 | **EZR23 Router** | 12V (native) | None | 5A | 18 AWG |
-| **Lysmarine Pi 4** | 5V | 12V→5V Buck | 2A | 18 AWG |
-| **TinyPilot Pi Zero** | 5V | 12V→5V Buck | 1A | 18 AWG |
+| **Hub Pi 4 (lysmarine)** | 5V | 12V→5V Buck | 2A | 18 AWG |
+| **Steering Pi 3B (arionpypilot)** | 5V | 12V→5V Buck | 1A | 18 AWG |
 | **Arduino Motor Controller** | 5V | 12V→5V Buck | 2A | 18 AWG |
 | **Rudder Feedback (if separate)** | 5V/12V | As required | 1A | 18 AWG |
 
@@ -78,36 +84,39 @@ graph TD
     end
     
     subgraph Sensors
-        WS80[Ecowit WS80 Wind] -.->|433MHz| RTL[RTL-SDR USB]
-        GPS[GPS Antenna] -->|USB/Serial| Lysmarine
+        WS80[Ecowitt WS80 Wind] -.->|433MHz| RTL[RTL-SDR USB]
+        RTL --> WX[arion-wx Pi Zero WX<br/>192.168.20.102<br/>rtl_433]
+        GPS1[GPS puck 1] -->|USB serial| Hub
+        GPS2[GPS puck 2] -->|USB serial| Steer
     end
-    
+
     subgraph Computing
-        RTL -->|USB| Lysmarine[Lysmarine Pi 4<br/>192.168.20.100<br/>Static IP]
-        Lysmarine -->|rtl_433| SK[Signal K Server<br/>Port 3000]
-        SK -->|WiFi JSON| TP[TinyPilot Pi Zero<br/>192.168.20.101<br/>Static IP]
-        TP -->|I2C| IMU[IMU Sensor<br/>MPU-9250/BNO055]
+        WX -->|MQTT 1883| Hub[Hub: lysmarine Pi 4<br/>192.168.20.101<br/>Signal K :3000, gpsd, OpenCPN]
+        Hub <-->|NMEA TCP 20220| Steer[Steering: arionpypilot Pi 3B<br/>192.168.20.100<br/>pypilot, web :8000]
+        Steer -->|I2C| IMU[ICM-20948 IMU]
     end
-    
+
     subgraph Control
-        TP -->|UART/PWM| IBT2[IBT-2 Motor Controller<br/>BTS7960B H-Bridge]
+        Steer -->|USB serial| Nano[Arduino Nano]
+        Nano --> IBT2[IBT-2 Motor Controller<br/>BTS7960B H-Bridge]
         IBT2 -->|12V High Amp| Pump[Octopus 1012<br/>Hydraulic Pump]
         Pump -->|Pressure| Steering[Hydraulic Steering Ram]
     end
-    
+
     subgraph Users
         Laptop[Laptop<br/>DHCP] -->|WiFi| EZR23
         Tablet[Tablet/Phone<br/>DHCP] -->|WiFi| EZR23
     end
     
     Mobile <-->|4G LTE| EZR23
-    EZR23 -->|WiFi 192.168.20.x| Lysmarine
-    EZR23 -->|WiFi 192.168.20.x| TP
+    EZR23 -->|WiFi 192.168.20.x| Hub
+    EZR23 -->|WiFi 192.168.20.x| Steer
+    EZR23 -->|WiFi 192.168.20.x| WX
     
-    Laptop -.->|Control| SK
-    Tablet -.->|Control| SK
-    Laptop -.->|Control| TP
-    Tablet -.->|Control| TP
+    Laptop -.->|Signal K :3000| Hub
+    Tablet -.->|Signal K :3000| Hub
+    Laptop -.->|Web UI :8000| Steer
+    Tablet -.->|Web UI :8000| Steer
 ```
 
 ## Network Configuration Steps
@@ -130,15 +139,15 @@ http://192.168.20.1
 
 **Important**: Static IPs are configured on the Pis themselves (not DHCP reservations) for easier hardware replacement. This allows you to swap a failed Pi with a pre-configured replacement without touching router settings.
 
-#### Lysmarine (192.168.20.100)
+#### Hub - lysmarine (192.168.20.101)
 
 **Using nmcli (NetworkManager - recommended)**:
 ```bash
-# SSH into Lysmarine Pi
-ssh pi@192.168.20.x  # Initially will have DHCP address
+# SSH into the hub Pi
+ssh bbb@192.168.20.x  # Initially will have DHCP address
 
 # Configure static IP on YachtArion WiFi connection
-sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.100/24
+sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.101/24
 sudo nmcli con mod "YachtArion" ipv4.gateway 192.168.20.1
 sudo nmcli con mod "YachtArion" ipv4.dns "8.8.8.8 1.1.1.1"
 sudo nmcli con mod "YachtArion" ipv4.method manual
@@ -155,7 +164,7 @@ sudo nano /etc/dhcpcd.conf
 
 # Add at the end:
 interface wlan0
-static ip_address=192.168.20.100/24
+static ip_address=192.168.20.101/24
 static routers=192.168.20.1
 static domain_name_servers=8.8.8.8 1.1.1.1
 
@@ -163,15 +172,15 @@ static domain_name_servers=8.8.8.8 1.1.1.1
 sudo systemctl restart dhcpcd
 ```
 
-#### TinyPilot (192.168.20.101)
+#### Steering node - arionpypilot (192.168.20.100)
 
 **Using nmcli**:
 ```bash
-# SSH into TinyPilot Pi
-ssh pi@192.168.20.x  # Initially will have DHCP address
+# SSH into the steering Pi
+ssh bbb@192.168.20.x  # Initially will have DHCP address
 
 # Configure static IP
-sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.101/24
+sudo nmcli con mod "YachtArion" ipv4.addresses 192.168.20.100/24
 sudo nmcli con mod "YachtArion" ipv4.gateway 192.168.20.1
 sudo nmcli con mod "YachtArion" ipv4.dns "8.8.8.8 1.1.1.1"
 sudo nmcli con mod "YachtArion" ipv4.method manual
@@ -180,7 +189,7 @@ sudo nmcli con up "YachtArion"
 # Verify
 ip addr show wlan0
 ping 192.168.20.1
-ping 192.168.20.100  # Test connectivity to Lysmarine
+ping 192.168.20.101  # Test connectivity to the hub
 ```
 
 **Alternative: Edit dhcpcd.conf**:
@@ -189,7 +198,7 @@ sudo nano /etc/dhcpcd.conf
 
 # Add at the end:
 interface wlan0
-static ip_address=192.168.20.101/24
+static ip_address=192.168.20.100/24
 static routers=192.168.20.1
 static domain_name_servers=8.8.8.8 1.1.1.1
 
@@ -202,8 +211,9 @@ sudo systemctl restart dhcpcd
 ```bash
 # From either Pi, test local network
 ping 192.168.20.1          # Router
-ping 192.168.20.100        # Lysmarine
-ping 192.168.20.101        # TinyPilot
+ping 192.168.20.100        # Steering (arionpypilot)
+ping 192.168.20.101        # Hub (lysmarine)
+ping 192.168.20.102        # Wind bridge (arion-wx)
 
 # Test internet via 4G
 ping 8.8.8.8
@@ -219,19 +229,13 @@ nslookup google.com
 
 ### 4. Configure Signal K Connections
 
-In Signal K Admin (`http://192.168.20.100:3000`):
+In Signal K Admin (`http://192.168.20.101:3000`):
 
-- Add pypilot connection:
-  - **Protocol**: TCP
-  - **Host**: `192.168.20.101`
-  - **Port**: `20220`
+- The pypilot connection is the `Pypilot_Raw_Data` provider (TCP, host `192.168.20.100`, port `20220`). See [data_flows.md](./data_flows.md) for the full provider list and GPS source priorities.
 
-### 5. Configure OpenCPN Pypilot Plugin
+### 5. OpenCPN
 
-In OpenCPN pypilot plugin settings:
-
-- **Host**: `192.168.20.101`
-- **Port**: `20220`
+OpenCPN runs on the hub and takes GPS from local gpsd (`127.0.0.1:2947`). If the OpenCPN pypilot plugin is used, point it at the steering node (`192.168.20.100`); the port is unverified (see owner confirmation).
 
 ## Hardware Replacement Procedure
 
@@ -239,9 +243,9 @@ In OpenCPN pypilot plugin settings:
 
 ### Preparing Spare Pis
 
-1. Image SD cards with base OS (Lysmarine or Raspberry Pi OS)
+1. Image SD cards with base OS (Lysmarine for the hub, Raspberry Pi OS / Debian for the steering node). The hub root is on a SATA SSD, not an SD card; the wind bridge uses a read-only overlayroot
 2. Boot each spare and configure its static IP as shown above
-3. Label SD cards clearly: "Lysmarine Spare - .100" or "TinyPilot Spare - .101"
+3. Label SD cards clearly: "Hub (lysmarine) Spare - .101", "Steering (arionpypilot) Spare - .100" or "Wind bridge Spare - .102"
 4. Store spares in waterproof case with documentation
 
 ### Swapping a Failed Pi
@@ -265,7 +269,7 @@ nmcli dev status
 
 # If connected but no access, check IP:
 ip addr show wlan0
-# Should show 192.168.20.100 or .101
+# Should show 192.168.20.100, .101 or .102
 
 # Try pinging gateway
 ping 192.168.20.1
@@ -278,15 +282,16 @@ ping 192.168.20.1
 ip addr show wlan0
 
 # Verify both have correct IPs:
-# Lysmarine: 192.168.20.100
-# TinyPilot: 192.168.20.101
+# Steering (arionpypilot): 192.168.20.100
+# Hub (lysmarine): 192.168.20.101
+# Wind bridge (arion-wx): 192.168.20.102
 
 # Check routing table
 ip route
 
 # Test connectivity
-ping 192.168.20.100  # From TinyPilot
-ping 192.168.20.101  # From Lysmarine
+ping 192.168.20.101  # From steering node
+ping 192.168.20.100  # From hub
 ```
 
 ### Static IP Not Applied After Reboot
@@ -305,7 +310,7 @@ cat /etc/dhcpcd.conf | grep -A 5 "interface wlan0"
 
 **Symptoms**: Router or devices report duplicate IP address.
 
-**Cause**: Static IPs (.100, .101) overlap with DHCP range.
+**Cause**: Static IPs (.100, .101, .102) overlap with DHCP range.
 
 **Solution**: Ensure router DHCP range is `192.168.20.50-150` which excludes .100 and .101.
 
@@ -329,16 +334,16 @@ ip route show
 ### Signal K Cannot Connect to Pypilot
 
 ```bash
-# From Lysmarine, test pypilot port
-telnet 192.168.20.101 20220
+# From the hub (lysmarine), test pypilot NMEA port
+telnet 192.168.20.100 20220
 
 # If connection refused, check pypilot is running:
-ssh pi@192.168.20.101
+ssh bbb@192.168.20.100
 sudo systemctl status pypilot
 
 # Check pypilot is listening on correct interface:
 sudo netstat -tlnp | grep 20220
-# Should show: 0.0.0.0:20220 or 192.168.20.101:20220
+# Should show: 0.0.0.0:20220 or 192.168.20.100:20220
 ```
 
 ## Security Considerations
@@ -349,7 +354,7 @@ sudo netstat -tlnp | grep 20220
 - Keep router firmware updated
 
 ### Pi Security
-- Change default `pi` user password on both Pis
+- Change default passwords on all Pis (SSH user is `bbb`)
 - Enable SSH key authentication
 - Consider disabling password authentication for SSH (after keys configured)
 - Keep OS and pypilot software updated
@@ -369,7 +374,7 @@ sudo netstat -tlnp | grep 20220
 - Check data usage if on metered plan
 - Verify dual-SIM failover functionality before extended passages
 - Test backup connectivity options
-- Verify spare Pi SD cards boot correctly
+- Verify spare Pi SD cards / SSD images boot correctly
 
 ### Before Extended Passages
 - Test all network connections
@@ -380,7 +385,7 @@ sudo netstat -tlnp | grep 20220
 - Document current configuration
 
 ### Backup Connectivity
-- Keep Pixel 2 as backup hotspot (different subnet: 192.168.43.x)
+- Keep Pixel 2 as backup hotspot (different subnet: 192.168.43.x; Pis would need their static IPs changed to that subnet, see [wireless_hotspot.md](archive/wireless_hotspot.md), which is legacy)
 - Document alternate APN settings for different carriers
 - Consider satellite backup for offshore passages
 - Carry spare SIM cards for both carriers
@@ -396,8 +401,8 @@ sudo netstat -tlnp | grep 20220
 - Create SD card images of working systems:
   ```bash
   # From another Linux system with SD card
-  sudo dd if=/dev/sdX of=lysmarine-backup-YYYYMMDD.img bs=4M status=progress
-  sudo dd if=/dev/sdX of=tinypilot-backup-YYYYMMDD.img bs=4M status=progress
+  sudo dd if=/dev/sdX of=arionpypilot-backup-YYYYMMDD.img bs=4M status=progress
+  # (hub root is a SATA SSD, image it the same way from /dev/sdX)
   ```
 - Store images on external drive
 - Document all configuration changes in this repository

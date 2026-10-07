@@ -1,6 +1,6 @@
 # Project Shopping List
 
-This document consolidates hardware requirements from the **Solar**, **Rewiring**, **TinyPilot**, and **Wind** integration plans.
+This document consolidates hardware requirements from the **Solar**, **Rewiring**, **Autopilot** (the old "TinyPilot" Pi Zero plan is legacy), and **Wind** integration plans.
 
 > [!NOTE]
 > Items marked **[Check Inventory]** may already be in your possession (based on uploaded photos). Please verify before purchasing.
@@ -18,7 +18,7 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
     *   Red & Black 6 AWG (16mm²) for DC-DC Charger runs.
 
 ## 2. Wiring & Distribution
-*Reference: [House Rewiring Plan](rewiring_house_loads.md)*
+*Reference: [House Rewiring Plan](rewiring_house_loads%20-%2012v.md)*
 
 ### Critical
 *   [ ] **Fuses**: Standard ATO/ATC Blade Fuses (Assorted Box: 5A, 10A, 15A, 20A, 30A).
@@ -31,8 +31,10 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
 *   [ ] **Bus Bars**: You have red/black bus blocks appropriately sized (based on photos). Ensure studs are clean.
 *   [ ] **Fuse Blocks**: You have two blocks. Verify they are rated for 32V DC max (Standard).
 
-## 3. Autopilot & Electronics (TinyPilot)
-*Reference: [TinyPilot Setup](tinypilot_setup.md)*
+## 3. Autopilot & Electronics
+*Reference: [TinyPilot Setup](archive/tinypilot_setup.md) (legacy; current architecture in docs/data_flows.md: steering Pi 3B .100, hub Pi 4 .101, wind Pi Zero WX .102)*
+
+> **Open issue (2026-10-07):** the 5V buck converters for the hub (Pi 4) and wind node (Pi Zero WX) are suspected of causing undervoltage and unclean reboots; better converters are on hand but not yet fitted. Items below mention only one buck per Pi 3B and Pi 4; the wind node's supply is not listed.
 
 ### Critical
 *   [ ] **12V -> 5V Buck Converter (USB Power)**: Dedicated PSU for Pi 3B & Pi 4.
@@ -44,9 +46,9 @@ This document consolidates hardware requirements from the **Solar**, **Rewiring*
 *   [ ] **Electrolytic capacitor, 2200–4700µF 25V**: Mounted on 12V input of each buck converter.
     *   *Purpose*: Absorbs brief inductive voltage spikes and millisecond dips from hydraulic pump and anchor winch start/stop. Rides through transients the LVD relay is too slow to handle.
     *   *Recommendation*: 3300µF 25V electrolytic, low-ESR (Jaycar or element14).
-*   [ ] **Connection Method (GPIO Required)**: Since USB is used for GPS.
+*   [ ] **Connection Method (GPIO Required) - OBSOLETE for Arion**: the Arduino Nano is connected to the steering Pi 3B by USB (FTDI FT232R), so no level shifter is needed. Kept for reference only.
     *   **Logic Level Shifter (TXS0108E)**: Bi-directional 3.3V <-> 5V shifter.
-    *   *Purpose*: Safety connects Pi Zero GPIO (3.3V) to Arduino RX/TX (5V). Direct connection risks frying the Pi.
+    *   *Purpose*: Safety connects Pi GPIO (3.3V) to Arduino RX/TX (5V). Direct connection risks frying the Pi.
 *   [ ] **End Stop Switches (2x)**: Waterproof limit switches for the rudder.
     *   *Purpose*: Stops the hydraulic pump hitting hard stops.
 

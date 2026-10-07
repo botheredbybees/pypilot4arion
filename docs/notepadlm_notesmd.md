@@ -1,3 +1,5 @@
+> **Background research notes (generic, AI-summarised from forum/doc sources) - NOT Arion configuration.** Where these notes differ from how Arion is actually set up, docs/data_flows.md is authoritative. Arion specifics: the steering node (`arionpypilot`, Pi 3B, 192.168.20.100) runs the only real pypilot and prefers its own local gpsd (second GPS puck) with Signal K as fallback, rather than the "Signal K as primary GPS reader" option below; the hub (`lysmarine`, Pi 4, 192.168.20.101) runs Signal K, Mosquitto, InfluxDB, Grafana, OpenCPN and its Lysmarine-bundled local pypilot must stay disabled; the wind bridge (`arion-wx`, Pi Zero WX, 192.168.20.102, read-only overlay root) runs rtl_433 -> MQTT to the hub (not the `signalk-rtl433` plugin). OpenPlotter/BBN OS are not used on Arion. The "MS-RPi-2026" section is a summarised checklist of unknown provenance, not a binding standard.
+
 Technical Briefing: Open-Source Marine Navigation and Control Systems
 
 Executive Summary

@@ -26,6 +26,8 @@ Fully 12V house/start system with isolated start battery, smart VSR isolator, Al
 - Common negative bus bonded to engine.
 - Labels on every run (ferrules + heatshrink).
 
+> **Open issue (2026-10-07):** the 5V buck converters feeding the hub (Pi 4, `lysmarine`, 192.168.20.101) and the wind node (Pi Zero WX, `arion-wx`, 192.168.20.102) are currently suspected of causing undervoltage and unclean reboots (kernel `Undervoltage detected!` on the hub; unexplained wind-node reboots). Better converters are on hand but not yet fitted. Treat the 5V supply as marginal until replaced. Steering node is Pi 3B, 192.168.20.100.
+
 ## Mermaid System Diagram
 
 ```mermaid

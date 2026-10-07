@@ -152,6 +152,7 @@ graph TD
 
 - **Pi Brownout Protection**: With MPPT load terminals unused, the Pis need independent brownout protection for engine cranking, anchor winch, and hydraulic pump events. Solution: (1) a 12V **LVD relay module** (disconnect 10.5V / reconnect 12.5V) inline between Bus A and the 5V buck converters — handles sustained low-voltage during engine cranking; (2) a **3300µF 25V capacitor** on the 12V input of each buck converter — absorbs brief inductive spikes and millisecond dips from pump/winch start/stop. No USB isolation required.
 - **Bilge**: Float direct to HouseMain fused (safety). [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/3871842/c1c3d3a9-2d6c-4b59-aa2d-4a2369422331/rewiring_house_loads.md)
+- **Pi 5V supply (open issue, 2026-10-07)**: the 5V buck converters feeding the hub (Pi 4, `lysmarine`, .101) and wind node (Pi Zero WX, `arion-wx`, .102) are currently suspected of causing undervoltage and unclean reboots; better converters are on hand but not yet fitted. The Mermaid diagram above lists only "Pi 3B + Pi 4" (steering .100 and hub .101); the wind node's supply is not shown.
 - **Torque**: 5Nm lugs; heatshrink all.
 
 **Version 1.3**: iTechworld, fixed Mermaid, no-load confirmed. Print/label before install. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/3871842/219ce6a0-1f73-49c7-83ba-236d2bb0fa90/rewiring_house_loads-12v.md)

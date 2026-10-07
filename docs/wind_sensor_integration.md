@@ -4,7 +4,11 @@
 
 This guide documents the integration of the **Ecowit WS80** ultrasonic anemometer into the *Arion* navigation system. Unlike traditional wired marine wind sensors, the WS80 is wireless (433MHz), solar-powered, and ultra-low maintenance (no moving parts).
 
-We use a Software Defined Radio (RTL-SDR) on the Lysmarine Pi 4 to receive the sensor's data, decode it, and inject it into the Signal K server. Pypilot then consumes this data to enable **Wind Mode** steering.
+> **Node-RED (verified 2026-10-07):** the conversion is done by a Node-RED flow hosted inside Signal K (`signalk-node-red` plugin, flows in `/home/signalk/.signalk/red/flows.json` on the hub, **flow "WS80 Raw Data"**). It reads `rtl_433/arion-wx/events`, converts `wind_dir_deg` to radians and `battery_mV` to volts, and sends Signal K deltas as source `node-red-ws80` (`environment.wind.angleApparent`, `electrical.batteries.ws80.voltage`). No separate Node-RED service exists, and the `signalk-rtl433` plugin described further down is **not** what is in use.
+>
+> **Current setup (verified 2026-10-07):** The RTL-SDR runs on the **wind bridge** `arion-wx` (Pi Zero WX, 192.168.20.102), not the hub. It runs `rtl_433 -F mqtt://192.168.20.101 1883 retain 1 events rtl_433/arion-wx/events`, publishing to Mosquitto on the hub (Pi 4, 192.168.20.101), which feeds Signal K. The wind Zero uses **overlayroot (read-only root)**: changes, logs and SSH keys vanish on reboot (password SSH only, no local logs). Do not unlock it unless you mean to. Reboot history is in `/var/log/arion/zero-mqtt-events.log` on the hub. Sections below that install or run rtl_433 on the Pi 4 are the earlier design and should not be repeated on the hub or the Zero.
+
+We use a Software Defined Radio (RTL-SDR) to receive the sensor's data, decode it, and inject it into the Signal K server. Pypilot then consumes this data to enable **Wind Mode** steering.
 
 ## Hardware Stack
 
@@ -36,7 +40,7 @@ mosquitto_sub -t 'rtl_433/#' -v
 We use the **Signal K MQTT Sensors** plugin to map the raw JSON into standard marine paths.
 
 **Plugin Configuration:**
-- **MQTT Topic**: `rtl_433/Fineoffset-WS80/983083`
+- **MQTT Topic**: `rtl_433/arion-wx/events`
 - **Mappings**:
     - `$.wind_avg_m_s` -> `environment.wind.speedApparent` (Unit: m/s)
     - `$.wind_dir_deg` -> `environment.wind.angleApparent` (Unit: deg)
@@ -45,7 +49,7 @@ We use the **Signal K MQTT Sensors** plugin to map the raw JSON into standard ma
 
 ### 4. Battery Monitoring (Node-RED)
 The WS80 reports battery in millivolts (e.g., 3060mV). To prevent Signal K from displaying this as "3060%", use a Node-RED flow to scale the value:
-- **Input**: MQTT Topic `rtl_433/Fineoffset-WS80/983083`
+- **Input**: MQTT Topic `rtl_433/arion-wx/events`
 - **Logic**: `msg.payload.battery_mV * 0.001`
 - **Output**: Signal K path `electrical.batteries.ws80.voltage`
 

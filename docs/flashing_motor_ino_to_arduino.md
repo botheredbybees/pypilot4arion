@@ -11,7 +11,7 @@ The `motor.ino` sketch is pypilot's motor controller firmware for Arduino Nano/U
 | Pump | Octopus Model 1012 - 12V DC, 1000 cu.cm/min  [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/images/3871842/d2aaa3b6-e700-4b91-b83b-b8c3505beee9/PXL_20260116_002621737.jpg) |
 | Current Draw | 4-6A average, 19A max  [marinedirect.com](https://www.marinedirect.com.au/octaf1212-octopus-autopilot-pump-type-2-adjustable) |
 | Motor Controller | IBT_2 (BTS7960) - 43A capability |
-| Microcontroller | Arduino Nano (CH340 clone) |
+| Microcontroller | Arduino Nano clone (USB-serial chip on Arion's board is an FTDI FT232R, stable path `/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_BG02A9O7-if00-port0`; the CH340 notes below apply only to CH340-based clones) |
 | Control Mode | H-bridge (pwm_style = 0 or 2) |
 
 The old TMQ AP8 autopilot used 4 solenoids to create an external H-bridge for polarity reversal. The IBT_2 replaces this entirely with an integrated H-bridge chip, greatly simplifying the wiring. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/images/3871842/c08c67dc-f137-44cb-8c9b-b0f3e2177826/PXL_20260116_002615056.jpg)
@@ -140,9 +140,7 @@ cd ~/pypilot4arion/arduino/motor
 
 # Edit Makefile for your setup
 nano Makefile
-# Set: BOARD_TAG = nano
-# Set: BOARD_SUB = atmega328old
-# Set: MONITOR_PORT = /dev/ttyUSB0
+# Set: DEVICE = /dev/ttyUSB0   (the Makefile uses DEVICE; it defaults to /dev/ttyAMA0)
 
 make
 make upload
@@ -199,6 +197,8 @@ GND (pin 8)   →  GND            →  Common ground
 ```
 
 ### Hardware Configuration Pins
+
+> **Arion note:** this repo's `arduino/motor/config.h` also sets board type and disables sensors at compile time (`BOARD_IBT2_H_BRIDGE`, `DISABLE_TEMP_SENSE`, `DISABLE_VOLTAGE_SENSE`, `DISABLE_CURRENT_SENSE`, `DISABLE_ENDSTOPS`). Check it before relying on the pin table or the voltage/current-sense steps in this guide.
 
 The motor.ino uses hardware pins to detect configuration at startup [arduino/motor/motor.ino](https://github.com/botheredbybees/pypilot4arion/blob/main/arduino/motor/motor.ino):
 
@@ -416,5 +416,5 @@ The IBT_2 with Octopus 1012 provides proportional control - pypilot can vary pum
 *Last updated: 2026-01-18*  
 *Part of pypilot4arion documentation*.
 
-**Next Step:** Once the motor controller is ready, proceed to **[TinyPilot Setup & Configuration](tinypilot_setup.md)** to configure the main autopilot computer.
+**Next Step:** Once the motor controller is ready, proceed to configure the steering node (Pi 3B, 192.168.20.100, `pypilot` service; see `docs/data_flows.md`). [tinypilot_setup.md](archive/tinypilot_setup.md) is legacy (TinyPilot Pi Zero no longer used).
 ```

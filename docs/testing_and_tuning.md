@@ -57,9 +57,9 @@ screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not ap
 
 **Troubleshooting:**
 
-- No data: baud rate is hardcoded to 38400 in motor.ino (no DIV_CLOCK) — check USB connection and CH340 driver
+- No data: baud rate is hardcoded to 38400 in motor.ino (no DIV_CLOCK) — check USB connection and the USB-serial driver (the Arion Nano uses an FTDI FT232R)
 - Garbage data: Wrong baud rate, check USB cable quality
-- CH340 not detected: Install/update CH340 drivers (see installation guide)
+- Serial adapter not detected: check `dmesg`; Arion's Nano is FTDI FT232R (CH340 drivers only matter for CH340 clone boards; see installation guide)
 
 #### 1.2 Arduino Flag Status Check
 
@@ -73,13 +73,13 @@ screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not ap
 1. Connect Arduino to 12V bench supply via voltage divider on A0:
    - 560Ω resistor from 12V+ to A0
    - 10kΩ resistor from A0 to GND
-2. Connect Arduino to Pi Zero via USB
-3. On Pi Zero, run pypilot in verbose mode:
+2. Connect Arduino to the steering Pi 3B (192.168.20.100) via USB
+3. On the steering Pi 3B, run pypilot in verbose mode (or query the running service):
 
    ```bash
    pypilot --verbose
    # or
-   pypilot_client 192.168.43.101 | grep flags
+   pypilot_client 192.168.20.100 | grep flags
    ```
 
 4. Check flag output for:
@@ -110,10 +110,10 @@ screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not ap
 2. Connect 12V supply to IBT-2 B+/B- (motor outputs OPEN, not connected yet)
 3. Ground Arduino D6 pin (H-bridge mode)
 4. Power Arduino from bench supply or USB
-5. On Pi Zero, manually command motor via pypilot web interface:
+5. On the steering Pi 3B, manually command motor via pypilot web interface:
 
    ```text
-   Navigate to: http://192.168.43.101
+   Navigate to: http://192.168.20.100:8000
    Engage autopilot
    Use servo.command slider: 
    - Move to 1500 (starboard)
@@ -156,7 +156,7 @@ screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not ap
 5. Check Arduino telemetry for current reading:
 
    ```bash
-   pypilot_client 192.168.43.101 | grep servo.current
+   pypilot_client 192.168.20.100 | grep servo.current
    ```
 
 6. Compare telemetry reading to ammeter:
@@ -215,7 +215,7 @@ screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not ap
 
 **Procedure:**
 
-1. Access Tinypilot web interface: <http://192.168.43.101>
+1. Access the pypilot web interface on the steering node: <http://192.168.20.100:8000>
 2. Navigate to Calibration section
 3. Perform compass calibration:
    - Follow on-screen instructions to rotate boat through 360°
@@ -334,7 +334,7 @@ screen /dev/ttyUSB0 38400  # motor.ino hardcodes 38400 — DIV_CLOCK does not ap
 **Procedure:**
 
 1. Measure current with autopilot disengaged (standby):
-   - Record Pi Zero + Arduino + GPS current draw
+   - Record Pi 3B + Arduino + GPS current draw
    - Typical: ~300-400mA (3.6-4.8W at 12V)
 2. Measure current with autopilot engaged, rudder stationary:
    - Should be similar to standby (pump not running)
@@ -789,7 +789,7 @@ pypilot_client_save motoring_profile
 # Load profile  
 pypilot_client_load heavy_weather_profile
 
-# Or edit ~/.pypilot/autopilot.conf manually
+# Or edit ~/.pypilot/pypilot.conf manually
 # Create sections like:
 # [motoring]
 # P = 0.01
@@ -862,7 +862,7 @@ pypilot_client_load heavy_weather_profile
 - Over-current fault (binding, low battery, high load)
 - Over-temperature fault (poor ventilation, high ambient temp)
 - Bad voltage fault (low battery, poor connections)
-- Communication timeout (Pi Zero crashed or Arduino disconnected)
+- Communication timeout (Pi 3B crashed or Arduino disconnected)
 
 **Solutions:**
 
@@ -888,9 +888,9 @@ pypilot_client_load heavy_weather_profile
 
 **For communication timeout:**
 
-1. Check USB connection between Pi Zero and Arduino
+1. Check USB connection between the Pi 3B and Arduino
 2. Verify Arduino still running (D13 LED should flash)
-3. Check Pi Zero hasn't locked up (ping 192.168.43.101)
+3. Check the Pi 3B hasn't locked up (ping 192.168.20.100)
 4. Check USB cable quality (data+power, not power-only)
 
 ### Issue: Autopilot Works but Power Consumption Too High
@@ -926,7 +926,7 @@ pypilot_client_load heavy_weather_profile
 1. Verify GPS has fix:
 
    ```bash
-   pypilot_client 192.168.43.101 | grep gps.fix
+   pypilot_client 192.168.20.100 | grep gps.fix
    # Should show: gps.fix = True
    ```
 
@@ -935,7 +935,7 @@ pypilot_client_load heavy_weather_profile
 4. Verify GPS data in pypilot logs:
 
    ```bash
-   tail -f ~/.pypilot/pypilot.log | grep NMEA
+   sudo journalctl -u pypilot -f   # on the steering Pi 3B
    ```
 
 5. Check waypoint is set correctly in OpenCPN or pypilot interface
@@ -945,10 +945,10 @@ pypilot_client_load heavy_weather_profile
 ### Enable Detailed Logging
 
 ```bash
-# On Tinypilot Pi Zero, edit /etc/pypilot.conf or start pypilot with:
-pypilot --log_dir=/home/tc/logs --verbose
+# On the steering Pi 3B, run pypilot with verbose output and read the service log:
+pypilot --verbose
+sudo journalctl -u pypilot --since today
 
-# Logs will be written to specified directory
 # Useful for post-passage analysis
 ```
 

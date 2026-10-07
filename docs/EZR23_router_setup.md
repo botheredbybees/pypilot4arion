@@ -1,5 +1,7 @@
 # EZR23 Router Setup for Pypilot4arion
 
+> Current addressing: .100 = steering Pi 3B (`arionpypilot`), .101 = hub Pi 4 (`lysmarine`), .102 = wind Pi Zero WX (`arion-wx`). Data-flow details: [data_flows.md](./data_flows.md). Older text below that mentions "TinyPilot" refers to a superseded design.
+
 This document describes the configuration of the EZR23 4G LTE router as the primary network gateway for the Arion pypilot system. The EZR23 replaces the phone-based hotspot (Pixel 2) providing dedicated, reliable connectivity with 12V marine-compatible power and high-gain antenna support.
 
 ## Overview
@@ -137,7 +139,7 @@ Navigate to: `Network > Wireless`
 1. Navigate to: **Network > DHCP and DNS**
 2. **Scroll down** on the page to find the **"Active DHCP Leases"** table
 3. Note the MAC addresses of your devices:
-   - Look for hostnames like `raspberrypi`, `lysmarine`, or `tinypilot`
+   - Look for hostnames like `raspberrypi`, `lysmarine`, `arionpypilot` or `arion-wx`
    - MAC addresses starting with `b8:27:eb:` (older Pi), `dc:a6:32:`, or `e4:5f:01:` (Pi 4)
 
 **Example Active Leases Table**:
@@ -155,19 +157,25 @@ Navigate to: `Network > Wireless`
 2. Click the **"Add"** button
 3. Fill in the details for each device:
 
-**For Lysmarine (Pi 4)**:
+**For the hub - Lysmarine (Pi 4)**:
 - **Hostname**: `lysmarine`
 - **MAC Address**: `dc:a6:32:yy:yy:yy` (from Active Leases table)
-- **IPv4 Address**: `192.168.20.100`
+- **IPv4 Address**: `192.168.20.101`
 - **Lease Time**: (leave blank - uses default)
 
 4. Click **"Save & Apply"**
 5. Click **"Add"** again for the next device
 
-**For TinyPilot (Pi Zero)**:
-- **Hostname**: `tinypilot`
-- **MAC Address**: `b8:27:eb:xx:xx:xx` (from Active Leases table)
-- **IPv4 Address**: `192.168.20.101`
+**For the steering node (Pi 3B)**:
+- **Hostname**: `arionpypilot`
+- **MAC Address**: (from Active Leases table)
+- **IPv4 Address**: `192.168.20.100`
+- **Lease Time**: (leave blank)
+
+**For the wind bridge (Pi Zero WX)**:
+- **Hostname**: `arion-wx`
+- **MAC Address**: (from Active Leases table)
+- **IPv4 Address**: `192.168.20.102`
 - **Lease Time**: (leave blank)
 
 6. Click **"Save & Apply"**
@@ -177,19 +185,21 @@ Navigate to: `Network > Wireless`
 1. Reboot both Raspberry Pis or disconnect/reconnect from WiFi
 2. Check the **Active DHCP Leases** table again
 3. Verify that your devices now show their assigned static IPs:
-   - `lysmarine` at `192.168.20.100`
-   - `tinypilot` at `192.168.20.101`
+   - `arionpypilot` at `192.168.20.100`
+   - `lysmarine` at `192.168.20.101`
+   - `arion-wx` at `192.168.20.102`
 
 **From a Raspberry Pi, verify**:
 ```bash
 ip addr show wlan0
-# Should show 192.168.20.100 or 192.168.20.101
+# Should show the node's own address (.100, .101 or .102)
 
 ping 192.168.20.1
 # Should successfully ping the router
 
 ping 192.168.20.100
 ping 192.168.20.101
+ping 192.168.20.102
 # Should ping between the Pis
 ```
 
@@ -199,7 +209,7 @@ Navigate to: `Network > DHCP and DNS`
 
 - Ensure DHCP is enabled
 - Confirm the dynamic pool (e.g., `192.168.20.50` to `192.168.20.150`)
-- Your static leases (100, 101) are outside the dynamic pool range
+- Your static leases (100, 101, 102) are outside the dynamic pool range
 
 ### 7. Monitor Signal
 
@@ -218,12 +228,13 @@ With the EZR23 subnet (`192.168.20.x`), the following IPs are configured:
 | Device | IP Address | MAC Address | Role |
 | :--- | :--- | :--- | :--- |
 | **EZR23 Router** | `192.168.20.1` | (Check router label) | Gateway / 4G Internet / AP |
-| **Lysmarine** | `192.168.20.100` | (Set via static lease) | Navigation / OpenCPN / Signal K |
-| **TinyPilot** | `192.168.20.101` | (Set via static lease) | Autopilot Core / Motor Control |
+| **Steering** (`arionpypilot`, Pi 3B) | `192.168.20.100` | (Set via static lease) | pypilot / web UI / IMU / motor controller |
+| **Hub** (`lysmarine`, Pi 4) | `192.168.20.101` | (Set via static lease) | Signal K / OpenCPN / gpsd / MQTT / InfluxDB / Grafana |
+| **Wind bridge** (`arion-wx`, Pi Zero WX) | `192.168.20.102` | (Set via static lease) | Ecowitt WS80 via rtl_433 -> MQTT |
 | **User Laptop**| DHCP (50-150) | - | Configuration / Monitoring |
 | **Tablet/Phone**| DHCP (50-150) | - | Remote Display |
 
-Note: Update the network documentation (`network_map.md`) to reflect these addresses.
+Note: `network_map.md` has been updated to match these addresses.
 
 ## Routing and Internet Access
 
@@ -302,13 +313,13 @@ Example: EZR23 IP is `192.168.20.1`; WiFi relay network must not use `192.168.20
 **Solutions**:
 
 1. Ensure the correct ports are not blocked or filtered:
-   - Signal K Admin: `3000`
-   - Pypilot Web: `80`
-   - Pypilot Control API: `20220`
+   - Signal K Admin: `3000` (hub, .101)
+   - Pypilot Web: `8000` (steering, .100)
+   - pypilot server: `23322`; pypilot NMEA: `20220` (steering, .100)
    - SSH: `22`
    - VNC: `5900`
 2. Disable any third-party firewall services on the hosts themselves
-3. Confirm services are running on Lysmarine and TinyPilot
+3. Confirm services are running on the hub (Signal K) and the steering node (pypilot, pypilot_web)
 4. Access services locally via Ethernet to isolate a potential Wi-Fi issue
 
 ### Issue 5: DNS Resolution Problems
@@ -330,7 +341,7 @@ Example: EZR23 IP is `192.168.20.1`; WiFi relay network must not use `192.168.20
 **Solutions**:
 
 1. Verify MAC addresses are correct in static lease table
-2. Ensure static IP addresses (100, 101) are **outside** the DHCP dynamic pool range
+2. Ensure static IP addresses (100, 101, 102) are **outside** the DHCP dynamic pool range
 3. Clear old leases: reboot the router or wait for existing leases to expire
 4. On the Raspberry Pi, force DHCP renewal:
    ```bash
@@ -355,10 +366,10 @@ If you need to access vessel services from the internet (not recommended for sec
 
 | Service | Internal (LAN) | External (WAN) |
 | :--- | :--- | :--- |
-| Pypilot Web | `192.168.20.101:80` | `[Mobile IP]:80` |
-| Signal K | `192.168.20.100:3000` | `[Mobile IP]:3000` |
+| Pypilot Web | `192.168.20.100:8000` | `[Mobile IP]:8000` |
+| Signal K | `192.168.20.101:3000` | `[Mobile IP]:3000` |
 
-**Warning**: Port forwarding exposes internal services to the internet. Consider VPNs and strong authentication if required.
+**Warning**: Port forwarding exposes internal services to the internet. Consider VPNs and strong authentication if required. Remote access is currently via Tailscale on the hub (advertises 192.168.20.0/24), not port forwarding.
 
 ## Maintenance and Monitoring
 

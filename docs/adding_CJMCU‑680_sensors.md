@@ -3,7 +3,9 @@
 This note describes how to add a CJMCU‑680 (BME680) environmental sensor to the Arion system to measure **cabin temperature, humidity, barometric pressure, and VOC‑based “air quality”** near the galley/pilothouse.
 
 The CJMCU‑680 is a breakout board for Bosch’s **BME680**, which exposes I2C via pins `SCL`, `SDA`, `SDO`, and `CS`. [bosch-sensortec](https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme680-ds001.pdf)
-We connect it to the **Raspberry Pi 4** that runs SignalK and use a BME680‑aware SignalK plugin to publish the data.
+We connect it to the **Raspberry Pi 4 hub node** (`lysmarine`, 192.168.20.101) that runs SignalK and use a BME680‑aware SignalK plugin to publish the data.
+
+> **Open issue (2026-10-07):** the hub boot-looped (Lysmarine splash <-> boot log) until all peripherals, including this BME680 breakout board, were unplugged. The BME680 board is suspected but not proven. A later `Undervoltage detected!` was logged with the board disconnected, so the hub's 5V feed is also marginal (cheap 5V buck converter suspected; better ones on hand, not yet fitted). If the hub fails to boot, unplug the BME680 first.
 
 ***
 
@@ -130,7 +132,7 @@ For mapping to SignalK paths:
 - Pressure → `environment.pressure`
 - Gas/VOC → use whatever default path the plugin provides; if it offers an option, map to `environment.inside.airQuality` so dashboards can find it easily.
 
-OpenPlotter / OpenCPN can then subscribe to these SignalK paths to display cabin environment and barometric trends. [youtube](https://www.youtube.com/watch?v=GTo_DVZ4D6U)
+OpenCPN (and Grafana/dashboards) can then subscribe to these SignalK paths to display cabin environment and barometric trends. [youtube](https://www.youtube.com/watch?v=GTo_DVZ4D6U)
 
 ***
 

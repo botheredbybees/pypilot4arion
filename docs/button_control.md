@@ -1,7 +1,9 @@
 
 # Button Control for Pypilot
 
-This guide covers adding physical controls to your pypilot autopilot system on the TinyPilot Raspberry Pi.
+This guide covers adding physical controls to your pypilot autopilot system on the steering node (Pi 3B, 192.168.20.100).
+
+> **Note:** No buttons, IR receiver or encoder are fitted on Arion; this is a planning guide. GPIO tables below were written for a Pi Zero; the 40-pin header layout is identical on the Pi 3B. The steering node's Pi 3B runs pypilot locally, so the script talks to `localhost`.
 
 ## Control Options
 
@@ -20,7 +22,7 @@ Pypilot has built-in IR remote support. Use any IR remote (TV remote, dedicated 
 
 ### Wiring IR Receiver
 
-| IR Receiver Pin | Pi Zero GPIO | Pin Number | Notes |
+| IR Receiver Pin | Pi 3B GPIO | Pin Number | Notes |
 | :--- | :--- | :--- | :--- |
 | VCC | 3.3V Power | Pin 1 or 17 | 3.3V only, not 5V |
 | GND | Ground | Pin 6, 9, 14, etc. | Any ground pin |
@@ -152,7 +154,7 @@ import json
 
 # Pypilot connection settings
 PYPILOT_HOST = 'localhost'
-PYPILOT_PORT = 20220
+PYPILOT_PORT = 23322  # pypilot's own name=value bus (20220 is NMEA, not this protocol)
 
 # GPIO pin assignments (BCM numbering)
 PIN_AUTO = 17       # Auto/Standby toggle
@@ -194,7 +196,7 @@ class PypilotButtonController:
             sock.settimeout(2)
             sock.connect((PYPILOT_HOST, PYPILOT_PORT))
             
-            message = json.dumps({key: value}) + '\n'
+            message = key + '=' + json.dumps(value) + '\n'  # pypilot protocol: name=value
             sock.send(message.encode())
             sock.close()
             
@@ -212,16 +214,19 @@ class PypilotButtonController:
             sock.settimeout(2)
             sock.connect((PYPILOT_HOST, PYPILOT_PORT))
             
-            # Request value
-            request = json.dumps({'method': 'get', 'key': key}) + '\n'
+            # Request value: watch it, then read the first 'name=value' line back
+            request = 'watch=' + json.dumps({key: True}) + '\n'
             sock.send(request.encode())
             
-            # Read response
-            response = sock.recv(1024).decode()
+            buf = ''
+            while '\n' not in buf or not buf.split('\n')[0].startswith(key + '='):
+                buf += sock.recv(1024).decode()
+                lines = [l for l in buf.split('\n') if l.startswith(key + '=')]
+                if lines:
+                    buf = lines[0] + '\n'
             sock.close()
             
-            data = json.loads(response)
-            return data.get(key)
+            return json.loads(buf.strip().split('=', 1)[1])
             
         except Exception as e:
             print(f"Error getting value: {e}")
@@ -451,7 +456,7 @@ btn = Button(17, bounce_time=0.2)  # Increase to 200ms
 sudo systemctl status pypilot.service
 
 # Test pypilot port
-telnet localhost 20220
+telnet localhost 23322   # pypilot bus (20220 is the NMEA port)
 ```
 
 ## Advanced: Button LED Indicators
@@ -489,7 +494,7 @@ def update_status_leds(self):
 - **Built-in debouncing**: No external libraries needed
 - **Simpler code**: Fewer lines, easier to understand
 - **Better documentation**: Comprehensive examples and tutorials
-- **Works with all Pi models**: Including Pi Zero, Pi 4, Pi 5
+- **Works with all Pi models**: Including Pi Zero, Pi 3B, Pi 4, Pi 5
 
 ## References
 
@@ -500,7 +505,7 @@ def update_status_leds(self):
 
 ## Related Documentation
 
-- [TinyPilot Setup](./tinypilot_setup.md) - Main pypilot installation
+- [TinyPilot Setup](./archive/tinypilot_setup.md) - Legacy (TinyPilot Pi Zero is no longer used on Arion); see docs/data_flows.md for the current architecture
 - [Testing and Tuning](./testing_and_tuning.md) - Autopilot configuration
 
 

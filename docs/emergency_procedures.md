@@ -4,19 +4,19 @@
 
 ## 1. Autopilot Failure (Loss of Steering)
 
-**Symptoms**: Boat wanders off course, rudder unresponsive to "Auto" commands, or continuous beeping.
+**Symptoms**: Boat wanders off course, rudder unresponsive when **AP** is engaged, or continuous beeping.
 
 ### Immediate Action: Manual Override
-1.  **Disengage**: Press the **STANDBY** button on the cockpit control (if available) or Web UI.
+1.  **Disengage**: Tap **AP** in the web UI (`http://192.168.20.100:8000`, Control tab) so it is off (standby). There is no physical standby button on Arion. If the web UI will not load, do not wait for it: go straight to step 2.
 2.  **Hydraulic Bypass**:
     *   Locate the **Bypass Valve** on the Octopus hydraulic pump.
     *   Turn the valve **Open** (Counter-Clockwise) to allow free flow of fluid.
 3.  **Steer Manually**: Use the ship's wheel. The helm should feel lighter with the bypass open.
 
 ### Troubleshooting at Sea
-1.  **Check Power**: Is the TinyPilot Pi Zero Green LED on?
+1.  **Check Power**: Is the Steering Pi 3B (`arionpypilot`, 192.168.20.100) Green LED on?
     *   *No*: Check fuse in **Bus B (Regulated)** panel.
-    *   *Yes*: Try a software reboot via `http://192.168.43.101` -> Configuration -> System -> Reboot.
+    *   *Yes*: Open the pypilot web UI at `http://192.168.20.100:8000`; if it will not load, power-cycle the Steering Pi (or `sudo systemctl restart pypilot pypilot_web` over SSH as `bbb`). The Hub (192.168.20.101) and wind Zero (192.168.20.102) are not part of steering.
 2.  **Check Drive**:
     *   Listen for the pump motor whirring.
     *   If motor runs but rudder doesn't move: Check fluid level / Air in lines.

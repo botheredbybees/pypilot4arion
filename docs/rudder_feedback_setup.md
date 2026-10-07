@@ -85,7 +85,7 @@ We will create a **Parallel Signal** setup.
 
 ## 4. Pypilot Configuration
 
-1.  **Boot System**: Ensure Arduino is connected to Pi Zero.
+1.  **Boot System**: Ensure the Arduino is connected to the steering Pi 3B (192.168.20.100); web UI at `http://192.168.20.100:8000`.
 2.  **Web Interface**: Go to Calibration -> Rudder.
 3.  **Range Calibration**:
     *   Turn wheel hard Port. Click **Port Limit**.

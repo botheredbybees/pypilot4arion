@@ -25,8 +25,9 @@ Regular maintenance prevents "sudden" failures at sea.
 
 ## Annual Checks
 *   **SD Card Backup**:
-    *   Remove SD cards from TinyPilot (Pi Zero) and Lysmarine (Pi 4).
+    *   Remove SD cards from the Steering Pi 3B (`arionpypilot`) and the Pi Zero wind bridge (`arion-wx`). The Hub (Pi 4) boots from a USB SATA SSD, not an SD card: back up Signal K `settings.json` and OpenCPN config (see [backup_and_recovery.md](backup_and_recovery.md)).
     *   Create full image backups.
+    *   The wind Zero runs overlayroot (read-only), so its card sees little write wear; do not unlock it for routine maintenance.
     *   Replace cards if older than 2 years as preventative maintenance.
 *   **Wind Sensor**:
     *   Inspect Ecowit WS80 at masthead.
