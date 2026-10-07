@@ -38,7 +38,7 @@ There are **no physical buttons** on Arion. The pilot is controlled from the web
 1.  **OpenCPN**: Right-click a route -> "Activate Route".
 2.  **Pypilot**: Select **nav** (or **gps**) in the mode drop-down, then tap **AP**. If neither is listed, pypilot is not receiving a route/GPS feed.
 3.  **Monitor**: Ensure the boat tracks the line. Watch for XTE (Cross Track Error).
-*   **Not set up yet:** as of 2026-10-07 pypilot's mode list is `compass, gps, wind, true wind` with no `nav`, because OpenCPN has no output sending APB to pypilot. See `docs/data_flows.md` (Route following) before relying on this section.
+*   **Set up and verified 2026-10-08 (not yet tried underway):** OpenCPN sends APB to pypilot (`192.168.20.100:20220`), so **nav** appears in the mode list once a route is activated. Test it at the dock with the helm manned before relying on it. Details: `docs/data_flows.md` (Route following).
 
 ## 6. Trolling Motor (Propulsion)
 1.  **Deploy**: Lower motor into water. Lock depth collar.
