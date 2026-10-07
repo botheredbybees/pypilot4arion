@@ -16,7 +16,7 @@ All on the **YachtArion** WiFi (router EZR23, `192.168.20.1`). SSH user is `bbb`
 | Wind bridge | `arion-wx` | 192.168.20.102 | Pi Zero WX, **read-only root (overlayroot)** | Ecowitt WS80 via rtl_433, publishes to MQTT |
 
 Ports worth knowing: pypilot web `100:8000`, pypilot server `100:23322`, pypilot NMEA `100:20220`, Signal K `101:3000`,
-Signal K NMEA out `101:10110`, MQTT `101:1883`, gpsd `127.0.0.1:2947` (each Pi, local only).
+Signal K NMEA out `101:10110`, MQTT `101:1883`, Grafana `101:3080` (not 3000, that is Signal K), InfluxDB `101:8086`, gpsd `127.0.0.1:2947` (each Pi, local only).
 
 ## Position (GPS)
 
@@ -64,6 +64,8 @@ Keep one reader and one writer on 20220 (see providers below). More than that du
 
 `rtl_433 -F mqtt://192.168.20.101 1883 retain 1 events rtl_433/arion-wx/events`. MQTT client id `rtl_433-2546ffff847a`.
 
+**WS80 power:** `battery_mV` has stayed between 3.00 and 3.08 V since April 2026 (3.06 V on 2026-10-07; InfluxDB `electrical.batteries.ws80.voltage`), so the sensor's own supply is healthy. The wind Zero's outages are therefore *not* explained by a flat WS80 battery: the Zero (receiver, MQTT client) has its own 5V supply and WiFi.
+
 **Node-RED is not a separate service.** It is hosted by the Signal K plugin `signalk-node-red` (UI is inside the Signal K admin).
 Flows: `/home/signalk/.signalk/red/flows.json` (credentials in `flows_cred.json`, never commit or print it). Broker: `localhost:1883`.
 
@@ -75,8 +77,27 @@ Flows: `/home/signalk/.signalk/red/flows.json` (credentials in `flows_cred.json`
 The BME680 topic is published by `scripts/getBME680data.py` (I2C `0x77`, broker `localhost`, so it runs on the **hub**, retained messages).
 Unplugging the breakout board stops this flow; it does not affect steering.
 
-Observation, not yet checked: the flow labels the WS80 direction `angleApparent`. The WS80 reports an absolute wind direction, so whether that is
-truly apparent wind relative to the bow should be confirmed before wind-mode steering is trusted.
+**WS80 angle label (checked 2026-10-07).**
+- The flow publishes `wind_dir_deg` x pi/180 as `environment.wind.angleApparent` in the range 0..2pi (272 deg = 4.747 rad). Wind *speed* arrives separately from the `signalk-mqtt-sensors` plugin as `environment.wind.speedApparent`.
+- The label is **correct if the WS80's "N" mark points at the bow**: a fixed anemometer on a moving boat then reads apparent wind, relative to the bow. The WS80 has no moving parts and, as far as we know, no compass, so the angle is relative to the mark, not to north. **Owner confirmed 2026-10-07: aboard Arion it will face forward and turn with the boat**, so `angleApparent` is right. (It is currently on the carport, so readings are relative to wherever it is pointing.) If the mark is later found off the centreline, apply the offset.
+- Signal K's spec gives `angleApparent` as -pi..pi (negative to port). 0..2pi works for pypilot's MWV path, but other consumers may mis-read it; wrapping values above pi (`rad -= 2*pi`) in the Node-RED function is a small fix, not yet made.
+- The `signalk-wind-calibration` plugin is configured with the path `"environment.wind.angleApparent "` (**trailing space**) and offset 0, so it matches nothing. Harmless while the offset is 0, but it would silently do nothing if you set an offset. Fix the path before relying on it.
+- Pypilot gets wind via Signal K -> `sk-to-nmea0183` (MWVR/MWVT enabled) -> `Send_Wind_to_Pypilot` -> pypilot :20220 (`wind.source = tcp`).
+
+## Route following (pypilot `nav` mode)
+
+Verified 2026-10-07: pypilot's mode list is `[compass, gps, wind, true wind]`; **`nav` is missing and `apb.source = none`**.
+`nav` appears only when pypilot receives an **APB** sentence (`pypilot/nmea.py parse_nmea_apb`) or the Signal K path `steering.autopilot.target.headingTrue`.
+Nothing currently provides it:
+- OpenCPN (user `user`) has only the GPSd input connection and **no output connection**, so an active route sends nothing.
+- Signal K's `sk-to-nmea0183` plugin has `APB: false`, and the Signal K -> pypilot link carries nothing OpenCPN produces.
+
+To enable it: in OpenCPN (Options -> Connections) the connection added on 2026-10-07 was **Input, localhost:20220**, which does nothing (that is the hub, and nothing listens there). Edit it to **Network / TCP, address `192.168.20.100`, port `20220`, Direction Output** (untick Receive input), with APB allowed in the output filter; keep GPSd and Signal K as inputs and use *Adjust communication priorities* to put GPSd first for position. Then activate a route: `nav` should appear in the pypilot mode list (check with `pypilot_client ap.modes apb.source`). Test at the dock with **AP off**. Status 2026-10-07: modes `[compass, gps, wind, true wind]`, `apb.source = none`.
+Pypilot's own `gps.source` falls back from `gpsd` to `signalk` if the steering puck has no fix (seen 2026-10-07 when the puck on the windowsill lost its fix); that is by design.
+
+## Grafana
+
+Grafana (`http://192.168.20.101:3080`) allows **anonymous Viewer access** (no login), set in `/etc/grafana/grafana.ini` under `[auth.anonymous]` (`enabled = true`, `org_role = Viewer`) on 2026-10-07. Dashboards: `Arion`, `Arion Master Sailing Hub`, `Arion Sailing Dashboard`. To edit a dashboard, log in as the Grafana admin. Anyone on YachtArion or the tailnet can *view*; if that is not acceptable, set `enabled = false`. Data source: InfluxDB 1.x database `signalk` (fed by the Signal K `signalk-to-influxdb` plugin).
 
 ## Signal K configuration
 
@@ -149,6 +170,8 @@ Always use `/dev/serial/by-id/...`, never `ttyUSB0/1`: the numbers change with p
 | Signal K before link consolidation | `...settings.json.bak-20261007-173836` | same |
 | gpsd (steering) | `/etc/default/gpsd.bak-20261007`, `.bak2-20261007` | copy back, `sudo systemctl restart gpsd` |
 | OpenCPN | `/home/user/.opencpn/opencpn.conf` | close OpenCPN first; no automatic backup exists |
+| Grafana config before anonymous access | `/etc/grafana/grafana.ini.bak-20261007` (hub) | copy back, `sudo systemctl restart grafana-server` |
+| Grafana DB + InfluxDB before the 2026-10-07 upgrades | `/root/backup-20261007/` (hub) | `grafana.db`, `etc-grafana/`, portable `influx/` backup (`influxd restore -portable`) |
 
 Signal K can overwrite `settings.json` while running, so always stop it before restoring a file.
 
@@ -182,7 +205,7 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 - **Two config homes.** `bbb` and `user` each have a `~/.opencpn`; the running one is `user`'s.
 - **A second pypilot on the hub** (installed by Lysmarine) competed with the real one as a Signal K source.
 - **No RTC.** Clocks start at the last saved time and jump when NTP syncs, so early-boot services carry wrong timestamps and `logrotate` may fail once.
-- **apt repo keys.** InfluxData (`NO_PUBKEY DA61C26A0585BD3B`) and Grafana (`EXPKEYSIG 963FA27710458545`) keys need refreshing, or those two never upgrade.
+- **apt repo keys (fixed 2026-10-07).** InfluxData (`NO_PUBKEY DA61C26A0585BD3B`) and Grafana (`EXPKEYSIG 963FA27710458545`) keys were refreshed from the vendors; they now live in `/usr/share/keyrings/influxdata-archive.gpg` and `/usr/share/keyrings/grafana.gpg` (scoped with `signed-by`). Old files are backed up in `/root/apt-key-backup-20261007/`. Fingerprints: InfluxData `24C975CBA61A024EE1B631787C3D57159FC2F927`, Grafana `B53AE77BADB630A683046005963FA27710458545`. Re-check when the subkeys expire (Grafana 2027).
   `curl ... | sh` for Tailscale aborts on those errors: use `sudo apt-get install tailscale` after the repo is added.
 - **Pypilot timestamps** from Signal K are offset by the local UTC offset (11 h in AEDT) because `pypilot/signalk.py:434` uses `time.mktime` on a UTC string. Cosmetic; nothing checks freshness with it.
 - **Cheap 5V converters** are the prime suspect for hub undervoltage events and the wind node's unclean reboots. Better converters are on hand but not yet fitted.
@@ -192,6 +215,8 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 - Steering node WiFi: ping varies from about 5 ms to 400 ms and dropped once. Fix before relying on it at sea.
 - Wind node reboots (about 16:32, 17:07, 18:20 on 2026-10-07), cause unknown.
 - Hub: one 4 s undervoltage event with the BME680 board disconnected; the board itself is still a suspect for the original boot loop.
-- InfluxData and Grafana apt keys need refreshing.
-- Node-RED labels the WS80 direction `angleApparent`; confirm the reference (see Wind) before trusting wind mode.
+- Upgraded 2026-10-07: Grafana 12.0.0 -> 13.2.3 and InfluxDB 1.11.8 -> 1.13.1 (health ok, Signal K still writing). Pre-upgrade backups on the hub: `/root/backup-20261007/` (`grafana.db`, `etc-grafana/`, `influx/` portable backup ~1.2 GB). 24 other packages are still not upgraded.
+- **Wind Zero keeps dropping off**: outages at about 16:32, 17:07, 18:20, 20:34-20:37 and again after 20:37:35 on 2026-10-07 (see `/var/log/arion/zero-mqtt-events.log` on the hub). While it is down, pypilot loses `wind`/`true wind` modes. It is currently on the carport (WiFi range?) with a cheap 5V supply; cause not yet isolated (power vs WiFi).
+- Wind-calibration plugin's trailing-space path and the 0..2pi angle range: see Wind (mounting reference confirmed).
+- `nav` mode needs an APB feed that does not exist yet: see Route following.
 - Duplicate `HDM/ROT/RSA` flows were reduced to one reader; the pypilot -> Signal K path for any other values has not been audited.
