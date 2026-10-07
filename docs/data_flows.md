@@ -170,6 +170,7 @@ Always use `/dev/serial/by-id/...`, never `ttyUSB0/1`: the numbers change with p
 | Signal K before link consolidation | `...settings.json.bak-20261007-173836` | same |
 | gpsd (steering) | `/etc/default/gpsd.bak-20261007`, `.bak2-20261007` | copy back, `sudo systemctl restart gpsd` |
 | OpenCPN | `/home/user/.opencpn/opencpn.conf` | close OpenCPN first; no automatic backup exists |
+| Journal / WiFi / logrotate changes (hub) | `/etc/systemd/journald.conf.d/persistent.conf`, `/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (also on steering), `/root/backup-20261007/logrotate-rsyslog.bak` | delete the drop-ins and restart `systemd-journald` / NetworkManager; restore the logrotate file |
 | Grafana config before anonymous access | `/etc/grafana/grafana.ini.bak-20261007` (hub) | copy back, `sudo systemctl restart grafana-server` |
 | Grafana DB + InfluxDB before the 2026-10-07 upgrades | `/root/backup-20261007/` (hub) | `grafana.db`, `etc-grafana/`, portable `influx/` backup (`influxd restore -portable`) |
 
@@ -193,8 +194,7 @@ Reboot watcher on the hub: `arion-zero-watch.service` logs the wind node's MQTT 
 
 **Hub will not boot (splash <-> boot log loop)**
 Unplug all peripherals and the breakout board; reconnect one at a time. The BME680 board is suspected. Check `vcgencmd get_throttled`
-(`0x0` is healthy) and `dmesg | grep -i voltage`. There is no persistent journal by default; enable it with
-`sudo mkdir -p /var/log/journal && sudo systemctl restart systemd-journald` so the next loop leaves evidence.
+(`0x0` is healthy) and `dmesg | grep -i voltage`. The hub's journal is **persistent since 2026-10-07** (Lysmarine ships `Storage=volatile`; the drop-in `/etc/systemd/journald.conf.d/persistent.conf` sets `Storage=persistent`, `SystemMaxUse=500M`), so after a loop read the failed boot with `sudo journalctl --list-boots` then `sudo journalctl -b -1`.
 
 **Wind node keeps dropping**
 Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `session taken over` means an unclean restart (power or WiFi), not a clean shutdown.
@@ -204,7 +204,9 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 - **GP vs GN talker.** A multi-GNSS puck reports `GN`; a priority list naming `GP` silently never matches, so a lower source wins.
 - **Two config homes.** `bbb` and `user` each have a `~/.opencpn`; the running one is `user`'s.
 - **A second pypilot on the hub** (installed by Lysmarine) competed with the real one as a Signal K source.
-- **No RTC.** Clocks start at the last saved time and jump when NTP syncs, so early-boot services carry wrong timestamps and `logrotate` may fail once.
+- **No RTC.** Clocks start at the last saved time and jump when NTP syncs, so early-boot services carry wrong timestamps.
+- **`logrotate.service` failed on the hub** (not the clock): `/etc/logrotate.d/rsyslog` had a `/var/log/messages` stanza with no `missingok`. Fixed 2026-10-07. Never leave `.bak` files inside `/etc/logrotate.d/`: logrotate reads them and reports duplicate entries.
+- **WiFi power saving** is left at the driver default, which can cause latency spikes and dropouts on an always-on node. `/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (`wifi.powersave = 2`) was added on the hub and the steering node on 2026-10-07; it takes effect at the next WiFi reconnect/reboot (not applied live to the pilot). The locked wind Zero has not been changed.
 - **apt repo keys (fixed 2026-10-07).** InfluxData (`NO_PUBKEY DA61C26A0585BD3B`) and Grafana (`EXPKEYSIG 963FA27710458545`) keys were refreshed from the vendors; they now live in `/usr/share/keyrings/influxdata-archive.gpg` and `/usr/share/keyrings/grafana.gpg` (scoped with `signed-by`). Old files are backed up in `/root/apt-key-backup-20261007/`. Fingerprints: InfluxData `24C975CBA61A024EE1B631787C3D57159FC2F927`, Grafana `B53AE77BADB630A683046005963FA27710458545`. Re-check when the subkeys expire (Grafana 2027).
   `curl ... | sh` for Tailscale aborts on those errors: use `sudo apt-get install tailscale` after the repo is added.
 - **Pypilot timestamps** from Signal K are offset by the local UTC offset (11 h in AEDT) because `pypilot/signalk.py:434` uses `time.mktime` on a UTC string. Cosmetic; nothing checks freshness with it.
