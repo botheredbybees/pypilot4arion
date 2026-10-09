@@ -53,6 +53,8 @@ Heading, rudder and attitude reach Signal K by **two routes** (since 2026-10-08)
 - **NMEA:** the `Pypilot_Raw_Data` reader on :20220 (HDM, ROT, RSA).
 Signal K priorities prefer native `pypilot`, then `Pypilot_Raw_Data.AP` after 10 s (timeout field is in ms: `10000`), for `navigation.headingMagnetic` and `steering.rudderAngle`; position/SOG/COG stay `local_gpsd.GN` only (pypilot's own puck does **not** override it, verified). The two routes agree (heading 345.7 deg and identical rudder values on both). With the 10 s fallback timeout, only `pypilot` is served and logged (the `Pypilot_Raw_Data.AP` copy is a fallback only). The NMEA route is **not an independent fallback**: it uses the same WiFi and the same pypilot process. After granting a device write access, **restart Signal K** so pypilot reconnects; an already-open websocket keeps its old (read-only) permission.
 Keep one reader and one writer on 20220 (see providers below). More than that duplicates every sentence.
+**2026-10-10:** `Pypilot_Raw_Data` now has `noDataReceivedTimeout: "10"` (seconds, same as the disabled `pypilot_nmea`). Before that its TCP link had gone half-open: ESTABLISHED on the hub but 0 bytes arriving for about 13.5 h, and Signal K never reconnected, so the 10 s fallback had nothing to fall back to.
+A frozen `Pypilot_Raw_Data.AP` timestamp under `values` is otherwise **normal**: while `pypilot` is fresh, Signal K drops lower-priority deltas instead of storing them, so the fallback copy only updates at startup or after `pypilot` goes quiet. To check the link itself, sample the byte counters twice a few seconds apart: `sudo ss -tnpi 'dport = :20220'`. Each Signal K socket should gain about 280 B/s (pypilot sends HDM and ROT at 2 Hz, RSA and XDR at 4 Hz).
 
 ## Wind
 
@@ -99,7 +101,7 @@ Nothing currently provides it:
 
 To enable it: in OpenCPN (Options -> Connections) the connection added on 2026-10-07 was **Input, localhost:20220**, which does nothing (that is the hub, and nothing listens there). Edit it to **Network / TCP, address `192.168.20.100`, port `20220`, Direction Output** (untick Receive input), with APB allowed in the output filter; keep GPSd and Signal K as inputs and use *Adjust communication priorities* to put GPSd first for position. Then activate a route: `nav` should appear in the pypilot mode list (check with `pypilot_client ap.modes apb.source`). Test at the dock with **AP off**. Status: before a route is active, modes are `[compass, gps, wind, true wind]` and `apb.source = none`. **Verified 2026-10-08:** with the OpenCPN Output connection to `192.168.20.100:20220` and a route activated, `ap.modes = [compass, gps, nav, wind, true wind]`, `apb.source = tcp`, `apb.track` and `apb.xte` update. Not yet tried: engaging the pilot in `nav` mode (do it at the dock with the helm manned first).
 
-Pypilot streams its own NMEA to every :20220 client; OpenCPN's Output-only link never reads it, so pypilot's per-client 64 KB output buffer eventually overflows and it drops that socket (log line `overflow in pypilot socket`); OpenCPN reconnects. Harmless; if route data ever cuts out periodically, look for that line in `journalctl -u pypilot` on the steering node.
+Pypilot streams its own NMEA to every :20220 client. OpenCPN's Output-only link never read it: on 2026-10-10 the hub had 3.3 MB queued unread on that socket (kernel receive queue, growing about 270 B/s). **Changed 2026-10-10:** in `DataConnections` the I/O field of the pypilot connection went from `2` (output) to `0` (intended: input + output) with an input whitelist of `ZDA` only, a sentence pypilot never sends, so OpenCPN now reads the stream and discards it. The receive queue now stays near 0. **Not yet re-verified:** APB output after the change. No route was active on the desk, and `PersistActiveRoute=0` means the route active before the restart was not restored. Next time a route is active, check `apb.source = tcp` and `nav` in `ap.modes`. If APB has stopped, close OpenCPN and copy back `opencpn.conf.bak-20261010-090700` (or set the connection back to Output in Options -> Connections and accept the backlog). If route data ever cuts out periodically, look for `overflow in pypilot socket` in `journalctl -u pypilot` on the steering node (pypilot drops a client whose 64 KB output buffer overflows).
 Pypilot's NMEA module also probes USB serial ports (38400 and 4800 baud); probes of the Arduino and GPS ports fail with `Errno 16` (busy) because pypilot's servo and gpsd already hold them.
 Pypilot's own `gps.source` falls back from `gpsd` to `signalk` if the steering puck has no fix (seen 2026-10-07 when the puck on the windowsill lost its fix); that is by design.
 
@@ -135,7 +137,7 @@ republish stale data under a fresh timestamp.
 | Provider id | State | What it does |
 |---|---|---|
 | `local_gpsd` | enabled | gpsd client, `127.0.0.1:2947`. The real GPS source. |
-| `Pypilot_Raw_Data` | enabled | TCP client to `192.168.20.100:20220`. The single reader of pypilot heading/ROT/rudder. |
+| `Pypilot_Raw_Data` | enabled | TCP client to `192.168.20.100:20220`. The single reader of pypilot heading/ROT/rudder. `noDataReceivedTimeout: "10"` (added 2026-10-10) so a half-open link reconnects. |
 | `Send_Wind_to_Pypilot` | enabled | TCP client to `192.168.20.100:20220` with `toStdout: nmea0183out`. Sends Signal K's NMEA to pypilot. Inbound `HDM`,`ROT`,`RSA` are ignored so it only transmits. |
 | `pypilot_nmea` | disabled | Duplicate reader of 20220. |
 | `nmea0183_feed` | disabled | Mis-typed leftover: an NMEA reader pointed at gpsd's JSON port 2947. |
@@ -148,6 +150,7 @@ republish stale data under a fresh timestamp.
   A stale `/home/bbb/.opencpn/opencpn.conf` once misled us (edited it, no effect); it has been deleted.
 - Connection in use: **GPSd, 127.0.0.1, port 2947** (added in Options -> Connections -> Add Connection -> Network -> GPSD).
   Add a Signal K connection (`192.168.20.101:3000`) only if you want wind/depth/AIS in OpenCPN.
+- Connection to pypilot: **Network / TCP, `192.168.20.100:20220`**, sends APB for `nav` mode. Since 2026-10-10 it also receives, with an input whitelist of `ZDA` only, so pypilot's stream is read and dropped instead of piling up (see Route following).
 - OpenCPN rewrites its config on exit. Edit the file only while OpenCPN is closed, or use the GUI.
 
 ## gpsd
@@ -191,7 +194,8 @@ Always use `/dev/serial/by-id/...`, never `ttyUSB0/1`: the numbers change with p
 | Signal K before link consolidation | `...settings.json.bak-20261007-173836` | same |
 | Signal K before heading/rudder priorities | `...settings.json.bak-20261008-070337` | same |
 | gpsd (steering) | `/etc/default/gpsd.bak-20261007`, `.bak2-20261007` | copy back, `sudo systemctl restart gpsd` |
-| OpenCPN | `/home/user/.opencpn/opencpn.conf` | close OpenCPN first; no automatic backup exists |
+| Signal K before `Pypilot_Raw_Data` timeout | `...settings.json.bak-20261010-090118` | same as other Signal K rows |
+| OpenCPN before pypilot link I/O change | `/home/user/.opencpn/opencpn.conf.bak-20261010-090700` | close OpenCPN first, copy back as user `user`, start OpenCPN |
 | Journal / WiFi / logrotate changes (hub) | `/etc/systemd/journald.conf.d/persistent.conf`, `/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (also on steering), `/root/backup-20261007/logrotate-rsyslog.bak` | delete the drop-ins and restart `systemd-journald` / NetworkManager; restore the logrotate file |
 | Grafana config before anonymous access | `/etc/grafana/grafana.ini.bak-20261007` (hub) | copy back, `sudo systemctl restart grafana-server` |
 | Grafana DB + InfluxDB before the 2026-10-07 upgrades | `/root/backup-20261007/` (hub) | `grafana.db`, `etc-grafana/`, portable `influx/` backup (`influxd restore -portable`) |
@@ -247,5 +251,5 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 - **Grafana "Autopilot State" panel** must read the text field and not filter by time: query `SELECT last("stringValue") FROM "steering.autopilot.state"`, and set the stat panel's *Value options -> Fields* to **All fields** (the default "numeric fields" hides text).
 - The rudder reads about -41 deg (pypilot `rudder.angle` 40.5, `servo.position` 44) on the desk, which is what an unconnected/uncalibrated rudder pot would show. Check the rudder feedback wiring and calibration before relying on the rudder gauge.
 - Wind-calibration plugin's trailing-space path: see Wind (mounting reference confirmed, angle range fixed).
-- `nav` mode needs an APB feed that does not exist yet: see Route following.
+- `nav` mode: APB from OpenCPN verified 2026-10-08, but not re-checked since the 2026-10-10 change to the OpenCPN connection (Output -> Input + Output with filter). See Route following.
 - Duplicate `HDM/ROT/RSA` flows were reduced to one reader; the pypilot -> Signal K path for any other values has not been audited.
