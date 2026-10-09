@@ -1,0 +1,53 @@
+{
+  "devices": [
+    {
+      "clientId": "pypilot-65405850623",
+      "description": "pypilot",
+      "permissions": "readwrite"
+    },
+    {
+      "clientId": "pypilot-90174519230",
+      "description": "pypilot",
+      "permissions": "readonly"
+    },
+    {
+      "clientId": "pypilot-14208403952",
+      "description": "pypilot",
+      "permissions": "readonly"
+    },
+    {
+      "clientId": "pypilot-32753142081",
+      "description": "pypilot",
+      "permissions": "readonly"
+    },
+    {
+      "clientId": "pypilot-29469502976",
+      "description": "pypilot",
+      "permissions": "readonly"
+    },
+    {
+      "clientId": "pypilot-54449101986",
+      "description": "pypilot",
+      "permissions": "readonly"
+    },
+    {
+      "clientId": "pypilot-90687870926",
+      "description": "pypilot",
+      "permissions": "readwrite"
+    }
+  ],
+  "users": [
+    {
+      "type": "admin",
+      "userId": null
+    },
+    {
+      "type": "admin",
+      "userId": null
+    }
+  ],
+  "allow_readonly": true,
+  "expiration": "NEVER",
+  "acls": 0,
+  "note": "security.json itself (hashes, secrets, tokens) is deliberately NOT backed up"
+}

@@ -1,0 +1,12 @@
+[Unit]
+After=network.target
+
+[Service]
+ExecStart=/home/signalk/.signalk/signalk-server
+Restart=always
+RestartSec=10
+WorkingDirectory=/home/signalk/.signalk
+User=signalk
+
+[Install]
+WantedBy=multi-user.target

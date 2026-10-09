@@ -1,0 +1,156 @@
+[
+  {
+    "id": "296c1849d5416b63",
+    "type": "tab",
+    "label": "Flow 1",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "58678e35d293836a",
+    "type": "tab",
+    "label": "Flow 2",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "f55d50ad40052db1",
+    "type": "mqtt-broker",
+    "name": "Arion charts MQTT",
+    "broker": "localhost",
+    "port": 1883,
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": 4,
+    "keepalive": 60,
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "mqtt-ws80-in",
+    "type": "mqtt in",
+    "z": "296c1849d5416b63",
+    "name": "WS80 Raw Data",
+    "topic": "rtl_433/arion-wx/events",
+    "qos": "2",
+    "datatype": "json",
+    "broker": "f55d50ad40052db1",
+    "nl": false,
+    "rap": false,
+    "inputs": 0,
+    "x": 420,
+    "y": 360,
+    "wires": [
+      [
+        "calc-node"
+      ]
+    ]
+  },
+  {
+    "id": "calc-node",
+    "type": "function",
+    "z": "296c1849d5416b63",
+    "name": "Math: Deg to Rad & mV to V",
+    "func": "// Perform Math\nvar windRad = msg.payload.wind_dir_deg * 0.0174533;\n// Signal K range is -pi..pi (negative to port); also avoids 0/360 averaging errors\nif (windRad > Math.PI) { windRad -= 2 * Math.PI; }\nvar battV = msg.payload.battery_mV * 0.001;\n\n// Build the Delta with the 'vessels.self' context\nmsg.payload = {\n    \"context\": \"vessels.self\",\n    \"updates\": [\n        {\n            \"source\": { \"label\": \"node-red-ws80\" },\n            \"values\": [\n                {\n                    \"path\": \"environment.wind.angleApparent\",\n                    \"value\": windRad\n                },\n                {\n                    \"path\": \"electrical.batteries.ws80.voltage\",\n                    \"value\": battV\n                }\n            ]\n        }\n    ]\n};\n\nmsg.headers = {\n    \"Content-Type\": \"application/json\"\n};\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 360,
+    "wires": [
+      [
+        "b501b30a5939b6ad"
+      ]
+    ]
+  },
+  {
+    "id": "b501b30a5939b6ad",
+    "type": "signalk-send-delta",
+    "z": "296c1849d5416b63",
+    "name": "Internal Link",
+    "x": 970,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "ac9d1ceaaf4d7d9f",
+    "type": "mqtt in",
+    "z": "296c1849d5416b63",
+    "name": "BME680 Raw Data",
+    "topic": "arion/sensors/cabin/bme680",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "f55d50ad40052db1",
+    "nl": false,
+    "rap": false,
+    "inputs": 0,
+    "x": 430,
+    "y": 500,
+    "wires": [
+      [
+        "c93c5cab5eeeeeee"
+      ]
+    ]
+  },
+  {
+    "id": "c93c5cab5eeeeeee",
+    "type": "function",
+    "z": "296c1849d5416b63",
+    "name": "Get BME680 sensor gas data  ",
+    "func": "// Expecting msg.payload like:\n// { temperature: ..., humidity: ..., pressure: ..., gas_ohms: ... }\n\nlet gas;\n\nif (msg.payload && typeof msg.payload === \"object\") {\n    if (typeof msg.payload.gas_ohms === \"number\") {\n        gas = msg.payload.gas_ohms;\n    } else if (typeof msg.payload.gasResistance === \"number\") {\n        gas = msg.payload.gasResistance;\n    }\n}\n\nif (typeof gas !== \"number\" || !isFinite(gas) || gas <= 0) {\n    return null; // ignore bad or missing values\n}\n\n// ---- rough, stateless mapping ----\n// Tune these min/max to fit your observed range\nconst minGas = 5000;     // \"bad\" air (low resistance)\nconst maxGas = 200000;   // \"good\" air (high resistance)\n\n// Clamp\nlet clamped = Math.max(Math.min(gas, maxGas), minGas);\n\n// Map to 0\u2013100 (higher = better)\nlet score = (clamped - minGas) / (maxGas - minGas) * 100;\nscore = Math.max(0, Math.min(100, score));\nscore = Math.round(score);\n\n// Build SignalK delta with both raw and score\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.method = \"POST\";\nmsg.url = \"http://localhost:3000/signalk/v1/api/vessels/self/delta\";\n\nmsg.payload = {\n    updates: [{\n        source: { label: \"bme680.cabin\" },\n        values: [\n            {\n                path: \"environment.inside.cabin.gasResistance\",\n                value: gas\n            },\n            {\n                path: \"environment.inside.cabin.airQuality\",\n                value: score\n            }\n        ]\n    }]\n};\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 710,
+    "y": 500,
+    "wires": [
+      [
+        "cb3385fdb6163ad4",
+        "b501b30a5939b6ad"
+      ]
+    ]
+  },
+  {
+    "id": "cb3385fdb6163ad4",
+    "type": "debug",
+    "z": "296c1849d5416b63",
+    "name": "debug 1",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 980,
+    "y": 500,
+    "wires": []
+  }
+]

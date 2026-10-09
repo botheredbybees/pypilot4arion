@@ -1,0 +1,16 @@
+{
+  "configuration": {
+    "protocol": "http",
+    "host": "localhost",
+    "port": 8086,
+    "database": "signalk",
+    "batchWriteInterval": 10,
+    "resolution": 200,
+    "recordTrack": false,
+    "separateLatLon": false,
+    "overrideTimeWithNow": false,
+    "storeOthers": false,
+    "blackOrWhite": "Black"
+  },
+  "enabled": true
+}

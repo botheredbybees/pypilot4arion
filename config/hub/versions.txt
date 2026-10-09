@@ -1,0 +1,12 @@
+Debian GNU/Linux 12 (bookworm)
+Linux 6.12.25+rpt-rpi-v8 aarch64
+gpsd 3.22-4.1+deb12u1
+grafana 13.2.3
+influxdb 1.13.1-1
+mosquitto 2.1.2-0mosquitto1~bookworm1
+nodejs 22.23.3-1nodesource1
+opencpn 1:5.10.2+dfsg-1~bpo12+1
+tailscale 1.102.5
+signalk-server 2.13.5
+Name: pypilot
+Version: 0.56

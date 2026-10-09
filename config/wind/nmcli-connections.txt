@@ -1,0 +1,12 @@
+NAME        TYPE      DEVICE  AUTOCONNECT  AUTOCONNECT-PRIORITY  ACTIVE 
+YachtArion  wifi      wlan0   yes          0                     yes    
+lo          loopback  lo      no           0                     yes    
+
+== YachtArion
+connection.autoconnect:                 yes
+connection.autoconnect-priority:        0
+connection.autoconnect-retries:         -1 (default)
+802-11-wireless.ssid:                   YachtArion
+802-11-wireless.mode:                   infrastructure
+802-11-wireless.band:                   --
+ipv4.method:                            manual

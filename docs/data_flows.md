@@ -107,6 +107,12 @@ Pypilot's own `gps.source` falls back from `gpsd` to `signalk` if the steering p
 
 Grafana (`http://192.168.20.101:3080`) allows **anonymous Viewer access** (no login), set in `/etc/grafana/grafana.ini` under `[auth.anonymous]` (`enabled = true`, `org_role = Viewer`) on 2026-10-07. Dashboards: `Arion`, `Arion Master Sailing Hub`, `Arion Sailing Dashboard`. To edit a dashboard, log in as the Grafana admin. Anyone on YachtArion or the tailnet can *view*; if that is not acceptable, set `enabled = false`. Data source: InfluxDB 1.x database `signalk` (fed by the Signal K `signalk-to-influxdb` plugin).
 
+**Dashboard `Arion Master Sailing Hub`** (uid `arion_master_01`, version 6 as of 2026-10-09; datasource `SignalK` = InfluxDB uid `ffgddffc2s64gc`). Admin login for editing or API use is `GRAFANA_USER` / `GRAFANA_PWD` in `.env` (never commit). Panels:
+- Row 1 gauges: Apparent Wind Angle (**scale -180..180**, matching the Node-RED wrap; it was 0..360 before and would have clamped port-side wind to 0), Apparent Wind Speed, SOG, Rudder Angle.
+- Stats: Heading Magnetic, WS80 Voltage, Autopilot State (`SELECT last("stringValue") FROM "steering.autopilot.state"`, Fields = All fields, no time filter), Pitch & Roll (timeseries).
+- Cabin (BME680, added 2026-10-09): Cabin Temperature (`last("value") - 273.15` of `environment.inside.cabin.temperature`, K to C), Humidity (percent), Pressure (`/100`, Pa to hPa), Air Quality (0-100 score gauge), Gas Resistance (`/1000`, kohm), and a 6 h Temperature & Humidity timeseries (`timeFrom: 6h`).
+- The previous version (5) is recoverable from Grafana's dashboard *Versions* tab (Settings -> Versions).
+
 ## Signal K configuration
 
 Server runs as user `signalk`; config is `/home/signalk/.signalk/settings.json` (needs sudo). Admin UI: `http://192.168.20.101:3000`.
@@ -184,6 +190,8 @@ Always use `/dev/serial/by-id/...`, never `ttyUSB0/1`: the numbers change with p
 | Grafana DB + InfluxDB before the 2026-10-07 upgrades | `/root/backup-20261007/` (hub) | `grafana.db`, `etc-grafana/`, portable `influx/` backup (`influxd restore -portable`) |
 
 Signal K can overwrite `settings.json` while running, so always stop it before restoring a file.
+
+**Full configuration snapshot in git (2026-10-09):** `config/` holds sanitized copies of the hub's Signal K settings, plugin configs and Node-RED flows, Grafana dashboards and datasources, Grafana/InfluxDB/Mosquitto/gpsd/NetworkManager/journald config, the steering node's `~/.pypilot/pypilot.conf` (**IMU calibration**), and the wind Zero's `weather.service` and boot config. Refresh it with `python3 scripts/backup_config.py` (needs `.env`; hosts default to 192.168.20.100/101/102) and review `git diff config/` before committing. Left out on purpose: Signal K `security.json` (only a device/permission summary is kept), `flows_cred.json`, `~/.pypilot/signalk-token`, WiFi passwords (only SSID/mode summaries; non-boat network names are masked), SSH keys, and the OpenCPN position lines. The script aborts if any secret from `.env` or a JWT/private key appears in the output. This repo is public, so **never commit raw copies of those files**. `config/README.md` has restore notes. Observations from the first snapshot: the pypilot compass calibration is still at its defaults (all zeros; calibrate on the boat, then re-run the backup); Mosquitto accepts anonymous connections on 0.0.0.0:1883.
 
 Reboot watcher on the hub: `arion-zero-watch.service` logs the wind node's MQTT connects/disconnects to
 `/var/log/arion/zero-mqtt-events.log` (rotated weekly). It is the only reboot history for the Zero.

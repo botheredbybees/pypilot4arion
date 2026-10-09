@@ -1,0 +1,13 @@
+START_DAEMON="true"
+USBAUTO="true"
+DEVICES="/dev/ttyUSB0"
+GPSD_OPTIONS="-n -G"
+# Use the persistent Lysmarine name
+#DEVICES="/dev/ttyLYS_gps_0"
+
+# -n: Start polling immediately
+# -G: Listen on all network interfaces
+GPSD_OPTIONS="-n -G"
+
+# False, because you have manually defined the device above
+#USBAUTO="false"

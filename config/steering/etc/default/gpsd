@@ -1,0 +1,13 @@
+# Devices gpsd should collect to at boot time.
+# They need to be read/writeable, either by user gpsd or the group dialout.
+#DEVICES=""
+
+# Other options you want to pass to gpsd
+#GPSD_OPTIONS=""
+
+# Automatically hot add/remove USB GPS devices via gpsdctl
+USBAUTO="false"
+
+START_DAEMON="true"
+GPSD_OPTIONS="-n -b"
+DEVICES="/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller_D-if00-port0"

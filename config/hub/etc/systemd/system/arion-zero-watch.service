@@ -1,0 +1,11 @@
+[Unit]
+Description=Log wind node (arion-wx) MQTT connect/disconnect events
+After=mosquitto.service
+
+[Service]
+ExecStart=/usr/local/bin/arion-zero-watch.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

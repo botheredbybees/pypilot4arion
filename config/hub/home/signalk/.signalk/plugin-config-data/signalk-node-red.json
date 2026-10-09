@@ -1,0 +1,7 @@
+{
+  "configuration": {
+    "flowFile": "flows.json",
+    "logging": "info"
+  },
+  "enabled": true
+}

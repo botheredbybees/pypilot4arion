@@ -1,0 +1,29 @@
+{
+  "configuration": {
+    "runLocalServer": true,
+    "port": 1883,
+    "sendToRemote": false,
+    "remoteHost": "mqtt://somehost",
+    "rejectUnauthorized": false,
+    "selectedOption": "1) vessels.self",
+    "paths": [
+      {
+        "path": "navigation.position",
+        "interval": 1
+      },
+      {
+        "path": "navigation.headingMagnetic",
+        "interval": 1
+      },
+      {
+        "path": "environment.wind.speedApparent",
+        "interval": 4
+      },
+      {
+        "path": "environment.wind.angleApparent",
+        "interval": 4
+      }
+    ]
+  },
+  "enabled": false
+}

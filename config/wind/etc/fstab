@@ -1,0 +1,13 @@
+#
+#  This fstab is for overlayroot. The real one can be found at
+#  /media/root-ro/etc/fstab
+#  The original entry for '/' and other mounts have been updated to be placed
+#  under /media/root-ro.
+#  To permanently modify this (or any other file), you should change-root into
+#  a writable view of the underlying filesystem using:
+#      sudo overlayroot-chroot
+#
+proc /proc proc defaults 0 0 # overlayroot:fs-virtual
+PARTUUID=1a064bb3-01 /boot/firmware vfat defaults,ro 0 2 # overlayroot:fs-unsupported
+#PARTUUID=1a064bb3-02 /media/root-ro/ ext4 ro,defaults,noatime,noauto 0 1
+/media/root-ro/ / overlay lowerdir=/media/root-ro/,upperdir=/media/root-rw/overlay/,workdir=/media/root-rw/overlay-workdir/_ 0 1

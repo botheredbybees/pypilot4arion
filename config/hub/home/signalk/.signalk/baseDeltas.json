@@ -1,0 +1,53 @@
+[
+  {
+    "context": "vessels.self",
+    "updates": [
+      {
+        "values": [
+          {
+            "path": "",
+            "value": {
+              "uuid": "urn:mrn:signalk:uuid:3e220085-f3aa-4c4f-add1-bb8e1eedbfb1",
+              "name": "Arion"
+            }
+          },
+          {
+            "path": "design.draft",
+            "value": {
+              "maximum": 2.8
+            }
+          },
+          {
+            "path": "design.length",
+            "value": {
+              "overall": 11
+            }
+          },
+          {
+            "path": "design.beam",
+            "value": 3.5
+          },
+          {
+            "path": "design.airHeight",
+            "value": 13
+          },
+          {
+            "path": "sensors.gps.fromBow",
+            "value": 7
+          },
+          {
+            "path": "sensors.gps.fromCenter",
+            "value": 1
+          },
+          {
+            "path": "design.aisShipType",
+            "value": {
+              "name": "Sailing",
+              "id": 36
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

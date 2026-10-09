@@ -1,0 +1,19 @@
+[Unit]
+Description=PyPilot Autopilot
+After=network-online.target gpsd.service
+Wants=network-online.target gpsd.service
+
+[Service]
+Type=simple
+User=bbb
+Group=dialout
+WorkingDirectory=/home/bbb
+ExecStart=/usr/local/bin/pypilot
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

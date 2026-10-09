@@ -1,0 +1,14 @@
+[Unit]
+Description=Arion Weather Station
+After=network.target
+
+[Service]
+#ExecStart=/usr/bin/rtl_433 -F "mqtt://192.168.20.101:1883,retain=1,devices=rtl_433/arion-wx/events"
+#ExecStart=/usr/bin/rtl_433 -F "mqtt://192.168.20.101:1883,retain=1,format=json"
+ExecStart=/usr/bin/rtl_433 -F "mqtt://192.168.20.101:1883,retain=1,events=rtl_433/arion-wx/events"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

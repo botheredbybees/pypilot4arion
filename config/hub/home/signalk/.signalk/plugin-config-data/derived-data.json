@@ -1,0 +1,83 @@
+{
+  "configuration": {
+    "default_ttl": 1,
+    "engine_instances": "port",
+    "battery_instances": "0",
+    "tank_instances": "fuel.0, fuel.1",
+    "air_instances": "outside",
+    "air": {
+      "Air density": false,
+      "outsidedewPoint": true,
+      "Heat Index": true,
+      "Wind Chill": true
+    },
+    "electrical": {
+      "batterPower0": false
+    },
+    "course data": {
+      "cog_magnetic": true,
+      "eta_waypoint": false,
+      "setDrift": false,
+      "steer_error": false,
+      "vmg_Wind": false,
+      "vmg_Wind_STW": false,
+      "dtg": false,
+      "vmg_Course": false
+    },
+    "heading": {
+      "cog_true": true,
+      "heading": true,
+      "leeway": false,
+      "kFactor": 12,
+      "leewayAngle": false,
+      "magneticVariation": true
+    },
+    "traffic": {
+      "CPA": true,
+      "range": 1852,
+      "distanceToSelf": true,
+      "timelimit": 30,
+      "sendNotifications": true
+    },
+    "depth": {
+      "belowKeel": false,
+      "belowKeel_2": false,
+      "belowSurface": false,
+      "transducerToKeel": false
+    },
+    "propulsion": {
+      "economyport": false,
+      "portstate": false,
+      "propslipport": false,
+      "economystarboard": false,
+      "starboardstate": false,
+      "propslipstarboard": false
+    },
+    "moon": {
+      "Moon": true,
+      "forecastDays": 1
+    },
+    "sun": {
+      "Sun": true,
+      "Sun Time": true,
+      "forecastDays": 1
+    },
+    "tanks": {
+      "tankVolume_fuel.0": false,
+      "volume_unit": "litres",
+      "tankVolume_fuel.1": false,
+      "tankVolume2_fuel.0": false,
+      "tankVolume2_fuel.1": false
+    },
+    "wind": {
+      "directionMagnetic2": false,
+      "directionMagnetic": false,
+      "trueWind": false,
+      "groundWind": true,
+      "groundWindDirection": false,
+      "windShift": false,
+      "directionTrue": false
+    }
+  },
+  "enabled": true
+}

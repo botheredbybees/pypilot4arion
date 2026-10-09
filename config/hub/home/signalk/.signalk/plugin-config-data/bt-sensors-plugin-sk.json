@@ -1,0 +1,10 @@
+{
+  "configuration": {
+    "adapter": "hci0",
+    "transport": "le",
+    "discoveryTimeout": 30,
+    "discoveryInterval": 10
+  },
+  "enabled": true,
+  "enableDebug": false
+}

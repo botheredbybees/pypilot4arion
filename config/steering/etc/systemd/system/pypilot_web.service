@@ -1,0 +1,15 @@
+[Unit]
+Description=PyPilot Web Server
+After=network.target pypilot.service
+
+[Service]
+Type=simple
+User=bbb
+# Adjust the path below if your python or script is elsewhere
+ExecStart=/usr/bin/python3 /usr/local/bin/pypilot_web
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

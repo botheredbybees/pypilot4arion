@@ -1,0 +1,8 @@
+{
+  "configuration": {
+    "path": "environment.wind.angleApparent ",
+    "frequency": 1000,
+    "offset": 0
+  },
+  "enabled": true
+}

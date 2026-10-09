@@ -1,0 +1,254 @@
+{
+  "interfaces": {
+    "applicationData": true,
+    "appstore": true,
+    "logfiles": true,
+    "nmea-tcp": true,
+    "playground": true,
+    "plugins": true,
+    "providers": true,
+    "rest": true,
+    "tcp": true,
+    "webapps": true,
+    "ws": true,
+    "mfd_webapp": true
+  },
+  "ssl": false,
+  "pipedProviders": [
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "tcp",
+              "port": "20220",
+              "suppress0183event": true,
+              "host": "192.168.20.100",
+              "removeNulls": true,
+              "noDataReceivedTimeout": "10",
+              "ignoredSentences": [
+                "MWV",
+                "VWR",
+                "VWT",
+                "VWI",
+                "VPW",
+                "IIMWV",
+                "IIVWR",
+                "IIVWT"
+              ],
+              "appendChecksum": false
+            }
+          }
+        }
+      ],
+      "id": "pypilot_nmea",
+      "enabled": false
+    },
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "tcp",
+              "removeNulls": true,
+              "suppress0183event": false,
+              "ignoredSentences": [
+                "MWV",
+                "VWR"
+              ],
+              "device": "/dev/ttyUSB0",
+              "baudrate": 4800,
+              "host": "127.0.0.1",
+              "port": "2947",
+              "appendChecksum": false
+            }
+          }
+        }
+      ],
+      "id": "nmea0183_feed",
+      "enabled": false
+    },
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "tcp",
+              "host": "localhost",
+              "port": "30330",
+              "noDataReceivedTimeout": "15",
+              "suppress0183event": true,
+              "ignoredSentences": [
+                "MWV",
+                "VWR"
+              ]
+            }
+          }
+        }
+      ],
+      "id": "OpenCPN",
+      "enabled": false
+    },
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "gpsd",
+              "host": "127.0.0.1",
+              "port": "2947"
+            }
+          }
+        }
+      ],
+      "id": "local_gpsd",
+      "enabled": true
+    },
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "tcp",
+              "host": "192.168.20.100",
+              "port": "20220",
+              "toStdout": [
+                "nmea0183out"
+              ],
+              "ignoredSentences": [
+                "HDM",
+                "ROT",
+                "RSA"
+              ]
+            }
+          }
+        }
+      ],
+      "id": "Send_Wind_to_Pypilot",
+      "enabled": true
+    },
+    {
+      "pipeElements": [
+        {
+          "type": "providers/simple",
+          "options": {
+            "logging": false,
+            "type": "NMEA0183",
+            "subOptions": {
+              "validateChecksum": true,
+              "type": "tcp",
+              "host": "192.168.20.100",
+              "port": "20220"
+            }
+          }
+        }
+      ],
+      "id": "Pypilot_Raw_Data",
+      "enabled": true
+    }
+  ],
+  "security": {
+    "strategy": "./tokensecurity"
+  },
+  "mdns": true,
+  "wsCompression": false,
+  "enablePluginLogging": false,
+  "pruneContextsMinutes": 60,
+  "port": 3000,
+  "sslport": 3443,
+  "keepMostRecentLogsOnly": true,
+  "logCountToKeep": 48,
+  "accessLogging": false,
+  "resourcesApi": {
+    "defaultProviders": {
+      "routes": "resources-provider",
+      "waypoints": "resources-provider",
+      "regions": "resources-provider",
+      "notes": "resources-provider",
+      "charts": "resources-provider"
+    }
+  },
+  "courseApi": {
+    "apiOnly": false
+  },
+  "sourcePriorities": {
+    "navigation.position": [
+      {
+        "sourceRef": "local_gpsd.GN",
+        "timeout": ""
+      }
+    ],
+    "navigation.speedOverGround": [
+      {
+        "sourceRef": "local_gpsd.GN",
+        "timeout": ""
+      }
+    ],
+    "navigation.courseOverGroundTrue": [
+      {
+        "sourceRef": "local_gpsd.GN",
+        "timeout": ""
+      }
+    ],
+    "navigation.headingMagnetic": [
+      {
+        "sourceRef": "pypilot",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "Pypilot_Raw_Data.AP",
+        "timeout": "10"
+      }
+    ],
+    "steering.rudderAngle": [
+      {
+        "sourceRef": "pypilot",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "Pypilot_Raw_Data.AP",
+        "timeout": "10"
+      }
+    ],
+    "environment.wind.angleApparent": [
+      {
+        "sourceRef": "signalk-node-red.XX",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "pypilot",
+        "timeout": "10"
+      }
+    ],
+    "environment.wind.speedApparent": [
+      {
+        "sourceRef": "signalk-mqtt-sensors",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "pypilot",
+        "timeout": "10"
+      }
+    ]
+  }
+}

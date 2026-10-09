@@ -1,0 +1,71 @@
+{
+  "configuration": {
+    "enabled": true,
+    "mqtt_server": "mqtt://localhost:1883",
+    "from": [
+      {
+        "mqtt_topic": "rtl_433/arion-wx/events",
+        "sensors": [
+          {
+            "json_path": "$.wind_avg_m_s",
+            "destination": "environment.wind.speedApparent",
+            "sensor": "other",
+            "unit": "literal"
+          },
+          {
+            "json_path": "$.humidity",
+            "destination": "environment.outside.humidity",
+            "sensor": "humidity",
+            "unit": "percent"
+          },
+          {
+            "json_path": "$.wind_max_m_s",
+            "destination": "environment.wind.speedMax",
+            "sensor": "other",
+            "unit": "literal"
+          },
+          {
+            "json_path": "$.light_lux",
+            "destination": "environment.outside.illuminance",
+            "sensor": "other",
+            "unit": "literal"
+          },
+          {
+            "json_path": "$.temperature_C",
+            "destination": "environment.outside.temperature",
+            "sensor": "temperature",
+            "unit": "C"
+          }
+        ]
+      },
+      {
+        "mqtt_topic": "arion/sensors/cabin/bme680",
+        "sensors": [
+          {
+            "json_path": "$.temperature",
+            "destination": "environment.inside.cabin.temperature",
+            "sensor": "temperature",
+            "unit": "C"
+          },
+          {
+            "json_path": "$.humidity",
+            "destination": "environment.inside.cabin.humidity",
+            "sensor": "humidity",
+            "unit": "percent"
+          },
+          {
+            "json_path": "$.pressure",
+            "destination": "environment.inside.cabin.pressure",
+            "sensor": "pressure",
+            "unit": "hPa"
+          }
+        ]
+      }
+    ],
+    "to": {
+      "base_topic": "signalk",
+      "min_publish_interval": 30
+    }
+  },
+  "enabled": true
+}

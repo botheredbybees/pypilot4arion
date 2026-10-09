@@ -1,0 +1,5 @@
+Debian GNU/Linux 13 (trixie)
+Linux 6.12.75+rpt-rpi-v8 aarch64
+Name: pypilot
+Version: 0.60
+gpsd 3.25-5+deb13u1
