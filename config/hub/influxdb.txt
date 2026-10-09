@@ -73,6 +73,7 @@ environment.wind.directionTrue
 environment.wind.speedApparent
 environment.wind.speedMax
 environment.wind.speedOverGround
+environment.wind.speedTrue
 navigation.attitude.pitch
 navigation.attitude.roll
 navigation.attitude.yaw

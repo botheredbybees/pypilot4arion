@@ -152,5 +152,171 @@
     "x": 980,
     "y": 500,
     "wires": []
+  },
+  {
+    "id": "ap-ka-comment",
+    "type": "comment",
+    "z": "296c1849d5416b63",
+    "name": "Autopilot state: translate enabled/disabled to auto/standby/wind/route (Signal K schema; BoatInstrument)",
+    "info": "steering.autopilot.state only changes when the pilot is engaged/disengaged, so it goes stale.\nEvery 10 s this re-sends the CURRENT Signal K value (never a made-up one).",
+    "x": 260,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "ap-ka-inject",
+    "type": "inject",
+    "z": "296c1849d5416b63",
+    "name": "every 3 s",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "3",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "15",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 420,
+    "wires": [
+      [
+        "ap-ka-http"
+      ]
+    ]
+  },
+  {
+    "id": "ap-ka-http",
+    "type": "http request",
+    "z": "296c1849d5416b63",
+    "name": "read autopilot",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:3000/signalk/v1/api/vessels/self/steering/autopilot",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 320,
+    "y": 420,
+    "wires": [
+      [
+        "ap-ka-fn"
+      ]
+    ]
+  },
+  {
+    "id": "ap-ka-fn",
+    "type": "function",
+    "z": "296c1849d5416b63",
+    "name": "translate state",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "func": "// pypilot plugin publishes 'enabled'/'disabled'; the Signal K schema (and BoatInstrument) expect\n// auto | standby | wind | route ...  Re-send a translated value every 3 s from the plugin's own latest value.\nconst p = msg.payload || {};\nconst st = p.state || {};\nlet raw, ts;\nif (st.values && st.values['pypilot-sk']) {\n    raw = st.values['pypilot-sk'].value; ts = st.values['pypilot-sk'].timestamp;\n} else if (st['$source'] === 'pypilot-sk') {\n    raw = st.value; ts = st.timestamp;\n}\nif (typeof raw !== 'string') { return null; }\n// if the plugin has gone quiet for 2 minutes, do not paper over it: let the value go stale\nif (ts && (Date.now() - Date.parse(ts)) > 120000) { return null; }\nconst mode = (p.mode && typeof p.mode.value === 'string') ? p.mode.value : 'compass';\nlet out;\nif (raw === 'enabled') {\n    out = (mode.indexOf('wind') >= 0) ? 'wind' : ((mode === 'gps' || mode === 'nav') ? 'route' : 'auto');\n} else if (raw === 'disabled') {\n    out = 'standby';\n} else {\n    return null;\n}\nmsg.payload = {\n    context: 'vessels.self',\n    updates: [{ source: { label: 'node-red-ap-state' }, values: [{ path: 'steering.autopilot.state', value: out }] }]\n};\nreturn msg;",
+    "x": 520,
+    "y": 420,
+    "wires": [
+      [
+        "b501b30a5939b6ad"
+      ]
+    ]
+  },
+  {
+    "id": "tws-comment",
+    "type": "comment",
+    "z": "296c1849d5416b63",
+    "name": "True wind speed = ground wind speed (no log sensor)",
+    "info": "environment.wind.speedTrue needs speed through water. Arion has none, so re-publish\nenvironment.wind.speedOverGround (derived-data) as speedTrue. Ignores current; picks up GPS speed jitter.",
+    "x": 220,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "tws-inject",
+    "type": "inject",
+    "z": "296c1849d5416b63",
+    "name": "every 2 s",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "2",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "15",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 540,
+    "wires": [
+      [
+        "tws-http"
+      ]
+    ]
+  },
+  {
+    "id": "tws-http",
+    "type": "http request",
+    "z": "296c1849d5416b63",
+    "name": "read ground wind speed",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:3000/signalk/v1/api/vessels/self/environment/wind/speedOverGround",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 330,
+    "y": 540,
+    "wires": [
+      [
+        "tws-fn"
+      ]
+    ]
+  },
+  {
+    "id": "tws-fn",
+    "type": "function",
+    "z": "296c1849d5416b63",
+    "name": "ground wind -> speedTrue",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "func": "// No speed-through-water sensor, so Signal K cannot compute environment.wind.speedTrue.\n// Use the ground wind speed (derived-data: apparent wind + SOG) as the true wind speed.\nconst p = msg.payload || {};\nconst v = p.value;\nif (typeof v !== 'number' || !isFinite(v)) { return null; }\n// never refresh a stale value: if derived-data stopped (e.g. wind sensor offline) let it go stale\nif (p.timestamp && (Date.now() - Date.parse(p.timestamp)) > 30000) { return null; }\nmsg.payload = {\n    context: 'vessels.self',\n    updates: [{ source: { label: 'node-red-tws-ground' }, values: [{ path: 'environment.wind.speedTrue', value: v }] }]\n};\nreturn msg;",
+    "x": 560,
+    "y": 540,
+    "wires": [
+      [
+        "b501b30a5939b6ad"
+      ]
+    ]
   }
 ]

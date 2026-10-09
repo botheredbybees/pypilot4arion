@@ -217,7 +217,7 @@
       },
       {
         "sourceRef": "Pypilot_Raw_Data.AP",
-        "timeout": "10"
+        "timeout": "10000"
       }
     ],
     "steering.rudderAngle": [
@@ -227,7 +227,7 @@
       },
       {
         "sourceRef": "Pypilot_Raw_Data.AP",
-        "timeout": "10"
+        "timeout": "10000"
       }
     ],
     "environment.wind.angleApparent": [
@@ -237,7 +237,7 @@
       },
       {
         "sourceRef": "pypilot",
-        "timeout": "10"
+        "timeout": "10000"
       }
     ],
     "environment.wind.speedApparent": [
@@ -247,7 +247,17 @@
       },
       {
         "sourceRef": "pypilot",
-        "timeout": "10"
+        "timeout": "10000"
+      }
+    ],
+    "steering.autopilot.state": [
+      {
+        "sourceRef": "signalk-node-red.XX",
+        "timeout": ""
+      },
+      {
+        "sourceRef": "pypilot-sk",
+        "timeout": "10000"
       }
     ]
   }
