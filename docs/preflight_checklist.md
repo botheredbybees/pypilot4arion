@@ -37,6 +37,19 @@ Complete these before touching any switch or breaker.
 
 *IP reference: Pi 3B Steering/Pypilot = `192.168.20.100` · Pi 4 Hub/Signal K = `192.168.20.101`*
 
+### 2a. Network and shore link (on the mooring)
+
+Not needed for steering, which works with no network. These checks matter for remote access from home.
+
+- [ ] **Wavlink** powered, and its **2.4G Wi-Fi switched ON** (it is the uplink radio; switching it off drops the boat to 4G)
+- [ ] **EZR23** `flow` WiFi client still **disabled** and the radio on **channel 11**
+- [ ] Live uplink check from the hub: `ping -c1 -t2 1.1.1.1` — second hop `192.168.10.1` = shore link, a carrier address = 4G
+- [ ] Hub joined `YachtArion` (or is on Ethernet) and is on Tailscale (`100.123.233.82`)
+- [ ] `vcgencmd get_throttled` reads `0x0` on the hub and steering node (anything else = supply problem)
+- [ ] At home: Bullet M2 Main page shows `airMAX: Disabled`
+
+Details: [`network_map.md`](network_map.md). Aboard to-do list: [`moving_aboard_todo.md`](moving_aboard_todo.md).
+
 ---
 
 ## 3. Go / No-Go Gate
@@ -71,6 +84,8 @@ Do not depart under autopilot until all applicable boxes are checked.
 | Symptom | First check | Reference |
 |---------|-------------|-----------|
 | `YachtArion` SSID not visible after 60 s | Router powered? Check router LED state | [`network_map.md`](network_map.md) |
+| Hub won't join `YachtArion` | Router may refuse the association for minutes. On the hub run `sudo nmcli con up "YachtArion"`; "Secrets were required" is a red herring. Recovery timer log: `sudo journalctl -t wifi-recovery` | [`network_map.md`](network_map.md), [`data_flows.md`](data_flows.md) |
+| No remote access from home | Check which uplink is live (`ping -c1 -t2 1.1.1.1`); Wavlink Wi-Fi ON? Bullet airMAX disabled? 4G is the fallback | [`network_map.md`](network_map.md) |
 | Pypilot web won't load | Pi 3B LED on? Try `ping 192.168.20.100` from phone | [`network_map.md`](network_map.md) |
 | Signal K / OpenCPN won't load | Pi 4 LED on? Try `ping 192.168.20.101` | [`network_map.md`](network_map.md) |
 | IMU shows "Uncalibrated" | First boot after moving Pi? Perform 360° calibration turn in calm water | [`testing_and_tuning.md`](testing_and_tuning.md) |
