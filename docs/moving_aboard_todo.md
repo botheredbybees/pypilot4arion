@@ -4,7 +4,12 @@ Drawn up 2026-10-11, after the desk build and test of the shore link (see `netwo
 
 ## 1. Do before it goes aboard
 
-- [ ] **Ethernet for the hub and steering Pi.** The EZR23 has one LAN port, so add a small unmanaged gigabit switch fed from the boat's 12 V (look for wide-input 9-48 V or 12-56 V industrial 5-port types, or a 12 V mini switch). Cable hub and steering Pi to it, keep WiFi as a fallback profile, keep the `wifi-recovery` timer. Test that unplugging the cable falls back to WiFi.
+- [ ] **Ethernet for the hub and steering Pi (optional: decide after the cold-boot soak below).** The `flow` client was disabled and the radio moved to channel 11 on 2026-10-11 as the suspected cause of the hub failing to join `YachtArion`; if the hub joins reliably over 5 to 10 power-ups, Ethernet is not needed, though it stays a cheap extra layer. The EZR23 has one LAN port, so use the spare **Linksys SD208** (8-port 10/100, 12 V) as the boat switch: EZR23 LAN to the switch, then hub and steering Pi from its other ports. The Wavlink stays on the router's WAN port. 10/100 is plenty for these data streams. Before fitting it:
+  - [ ] read the label on the switch and adapter: rated voltage, current and barrel polarity (usually centre-positive; confirm the symbol)
+  - [ ] measure the boat's 12 V rail at the switch while charging (about 13.8 to 14.4 V) and check the label allows that margin; if marginal, use a small 12 V regulator
+  - [ ] inline fuse of about 1 A on its feed; mount it away from the VHF and AIS cables
+  - [ ] soak test: unplug and replug the switch and cables, and confirm the hub and steering Pi come back on their own
+  - [ ] keep WiFi as a fallback profile and keep the `wifi-recovery` timer; test that unplugging the cable falls back to WiFi
 - [ ] **Replace the cheap 5 V buck converters** with fused, decent-quality converters, one per node (see "Parts to consider" below). Then check `vcgencmd get_throttled` reads `0x0` under load on the hub and steering node.
 - [ ] **Cold-boot soak:** power the whole stack up 5 to 10 times, including with the shore link off, and confirm the hub joins `YachtArion` every time. Check `sudo journalctl -t wifi-recovery` afterwards: this is the only way to see whether the timer ever fires.
 - [ ] **Real-distance link test** (Bullet M2 with 12 dBi omni, Wavlink on the boat on its mooring): read signal and CCQ on the Bullet, test in wind. Decide then whether a directional antenna is needed. After any Bullet reset or firmware change, check the Main page shows `airMAX: Disabled`.
@@ -64,4 +69,4 @@ Prices and listings change; check the seller and reviews, and prefer a seller th
 - Use it only on the hub's feed or non-critical loads, not the steering node. A latching or normally-closed arrangement is better so that a relay board failure leaves the hub powered.
 
 **Ethernet switch**
-- Unmanaged 5-port gigabit, wide DC input (about 9/12 V to 48/56 V), small, and fanless. Industrial DIN-rail types are sturdier than desktop ones but dearer.
+- Plan: use the spare Linksys SD208 (see section 1). If it proves unreliable aboard, replace it with an unmanaged 5-port switch with wide DC input (about 9/12 V to 48/56 V), small and fanless. Industrial DIN-rail types are sturdier than desktop ones but dearer.
