@@ -21,6 +21,12 @@ This is a fork of the open-source [pypilot](https://github.com/pypilot/pypilot) 
 - Signal K `settings.json` (`/home/signalk/.signalk/`) can be overwritten while the server runs: stop `signalk`, edit with a backup, start it.
 - Node-RED is not a separate service: it is the `signalk-node-red` plugin inside Signal K (flows in `/home/signalk/.signalk/red/flows.json`); it converts the WS80 and BME680 MQTT data into Signal K deltas.
 - Secrets (WiFi password, Pi login, IPs) live in `.env` (git-ignored). Never print or commit its values.
+- **Network / uplink (2026-10-11):** the EZR23 has three ranked uplinks via mwan3: `wan` Ethernet to the Wavlink (metric 10), the old `flow` WiFi client (20, currently disabled), 4G `MOBILE` (30). Do not enable the `flow` client casually: it ties the single radio (now on channel 11) to `flow`'s channel and was the suspected cause of the hub failing to join `YachtArion`. Details and tests: `docs/network_map.md`.
+- **Wavlink 2.4G Wi-Fi must stay ON** (it is also the uplink radio to the Bullet); switching it off drops the boat to 4G.
+- **Bullet M2: airMAX must be disabled** (setting is on the first, icon-only tab of airOS) or standard WiFi clients are deauthed within a second. After any reset or firmware change, check the Main page shows `airMAX: Disabled`. In airOS, **Apply** is what saves; **Test** reverts.
+- **The hub has two accounts:** SSH/admin is `bbb` (the only one with Claude Code, `~/.local/bin/claude`); the desktop, OpenCPN and AvNav run as `user`, whose terminal on the hub's own screen is `user`. Signal K runs as `signalk`. Moving the desktop to `bbb` was considered and deliberately not done.
+- The hub has a `wifi-recovery` systemd timer (`scripts/hub/`, installed in `/usr/local/sbin` and `/etc/systemd/system`) that runs `nmcli con up YachtArion` if wlan0 has been down 3 minutes. Log: `journalctl -t wifi-recovery`.
+- Do not switch the operator's laptop to another WiFi network (e.g. `YachtArion`) without asking; use Tailscale to reach the hub.
 - Remote access: Tailscale to the hub (`100.123.233.82`, Tailscale SSH needs a browser approval), then jump to `.100` / `.102`. See `docs/data_flows.md`.
 
 ## Build & Install
