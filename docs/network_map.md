@@ -57,6 +57,37 @@
 - **WiFi**: 2x SMA connectors for high-gain WiFi antennas
 - **Recommendation**: Mount 4G antennas as high as practical for best signal
 
+## Shore link to home (in progress, 2026-10-11)
+
+Goal: reach the boat on its mooring from home over a line-of-sight WiFi link. The link only provides the boat router's WAN uplink; the boat LAN (`192.168.20.x`) is unchanged and Tailscale carries remote access.
+
+```
+HOME                                       BOAT (mooring)
+flow router -- Bullet M2 (AP, bridge) ~~~~ Wavlink (WiFi client) -- ethernet -- EZR23 WAN
+                                                                    |-- YachtArion LAN: hub, steering node, wind bridge
+```
+
+**Status:** only the Bullet is configured and bench-tested so far; the Wavlink is not configured yet and is not to be left powered and half-configured near the boat network (its default repeater SSID `YachtArion_EXT2.4G` shares channel 1 with the EZR23).
+
+**Bullet M2 (airOS 6.2.0, home end)**
+- Factory reset (hold the reset pinhole ~10 s) returns it to `192.168.1.20`, login `ubnt`/`ubnt`; the admin name and password were then changed (not recorded here). The web UI needs an old-TLS-tolerant browser (Chrome worked; `curl` needed `--tlsv1 --ciphers 'DEFAULT@SECLEVEL=0'`).
+- Wireless: Access Point, WDS off, own SSID (WPA2-AES PSK, not recorded here), country Australia, 802.11 B/G/N, 20 MHz, **channel 6 (2437 MHz)**, airMAX off. Antenna: Hana Wireless HW-OD24-12-NF, 12 dBi omni, N female: antenna gain `12`, cable loss `0` so the EIRP limit calculation caps the output power. Mount it vertically (about 7-10 deg vertical beamwidth).
+- Network: **Bridge** mode, management IP static **`192.168.1.31`**/24, gateway and DNS `192.168.1.1` (the flow router). `192.168.1.20` is used by another device on the home network: never plug a default-address Bullet into the flow router.
+- Power: passive PoE injector. Injector port **POE** -> Bullet, port **LAN** -> router/laptop. Never power it from a plain router port.
+- Verified 2026-10-11: reachable at `192.168.1.31` over the laptop's wired port, SSID broadcast on channel 6 with WPA2. **Not yet verified:** a client joining and getting a DHCP lease through the flow router (a bridge hands out no addresses, so a phone on it with nothing upstream joins, finds no DHCP and flips back to its old network).
+- **airMAX must be OFF (setting is on the FIRST tab, the one with only an icon and no text, not on Wireless or Advanced).** With airMAX enabled the Bullet's AP deauths every standard WiFi client within a second (`Sending deauth to <mac>. Reason: STA does not want to use the mechanism (37)` in Monitor -> Log, `Connections: 0` on Main, the client re-prompting for the password). It cost a day on 2026-10-11: phones, a Linux laptop and the Wavlink all failed with a correct key, security none, new firmware and the antenna moved. After unticking it: `airMAX: Disabled`, 2 connections, CCQ 93 %, noise floor -92 dBm. Check the Main page says `airMAX: Disabled` after every reset or firmware change.
+- Firmware: upgraded from XW.v6.2.0 to **v6.3.26 (XW)** on 2026-10-11 (an earlier upload was rejected with "Invalid Firmware file" before anything was written; use only `XW.` files). It did not fix the join problem on its own (airMAX did).
+- Verified 2026-10-11 (supersedes the "not yet verified" above): a phone joins `flower` and the **Wavlink joined** it too, taking `192.168.1.77` from the flow router (Wavlink repeater/WAN MAC `82:3f:5d:09:d1:67`), 0 % loss and about 4 ms to it from a laptop on the home wifi. Still to do: the Wavlink in Gateway/client mode with the EZR23 on its WAN, and the real link over the mooring distance.
+- airOS gotcha: **Change** only stages a setting; it is kept only after **Apply** (the blue "Configuration contains changes" banner). **Test** reverts unless confirmed, and a reboot or logout discards unapplied changes. Apply wireless/system changes first, check they stuck (log out and in), then change the management IP last.
+
+**Wavlink (boat end), to do**
+- Reached at `192.168.10.1` (repeater wizard `wizard_rep.shtml`) with the laptop on a `192.168.10.x` address. Mode **Gateway** builds its own `192.168.10.x` NAT network; a client/bridge mode gives the EZR23 an address straight from the home router (no double NAT) and is preferred. Either way: connect it as a client to the **Bullet's SSID, never to `YachtArion`**, and turn off its own WiFi broadcast if the firmware allows.
+- Wire it to the EZR23 **WAN** port (DHCP). The boat LAN stays `192.168.20.x`.
+
+**Channel plan:** EZR23 `YachtArion` = channel 1; Bullet = channel 6 (or 11). Keep them non-overlapping.
+
+**Next:** plug the Bullet into the flow router, join its SSID from a phone and confirm a `192.168.1.x` lease and internet; configure the Wavlink as a client of the Bullet at the desk; check the EZR23 WAN gets an address; only then move to the boat and check the real link over the mooring distance (omni may need replacing with a directional antenna if the link is marginal).
+
 ## Power Distribution for Network Devices
 
 All devices powered from **House Bus A** via individual fused circuits:

@@ -1,0 +1,8 @@
+[Unit]
+Description=Re-join YachtArion wifi if the hub has no wifi connection
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/wifi-recovery.sh
