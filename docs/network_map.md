@@ -80,13 +80,29 @@ flow router -- Bullet M2 (AP, bridge) ~~~~ Wavlink (WiFi client) -- ethernet -- 
 - Verified 2026-10-11 (supersedes the "not yet verified" above): a phone joins `flower` and the **Wavlink joined** it too, taking `192.168.1.77` from the flow router (Wavlink repeater/WAN MAC `82:3f:5d:09:d1:67`), 0 % loss and about 4 ms to it from a laptop on the home wifi. Still to do: the Wavlink in Gateway/client mode with the EZR23 on its WAN, and the real link over the mooring distance.
 - airOS gotcha: **Change** only stages a setting; it is kept only after **Apply** (the blue "Configuration contains changes" banner). **Test** reverts unless confirmed, and a reboot or logout discards unapplied changes. Apply wireless/system changes first, check they stuck (log out and in), then change the management IP last.
 
-**Wavlink (boat end), to do**
-- Reached at `192.168.10.1` (repeater wizard `wizard_rep.shtml`) with the laptop on a `192.168.10.x` address. Mode **Gateway** builds its own `192.168.10.x` NAT network; a client/bridge mode gives the EZR23 an address straight from the home router (no double NAT) and is preferred. Either way: connect it as a client to the **Bullet's SSID, never to `YachtArion`**, and turn off its own WiFi broadcast if the firmware allows.
-- Wire it to the EZR23 **WAN** port (DHCP). The boat LAN stays `192.168.20.x`.
+**Wavlink (boat end), working on the desk 2026-10-11**
+- Reached at `192.168.10.1` (wizard `wizard_rep.shtml`). It is a WL-WN570HA1 (firmware `RPT70HA1.V4300.171128`) in **Repeater / Gateway** mode: it joins the Bullet's SSID as a client (WAN IP `192.168.1.77` from the flow router) and runs its own `192.168.10.x` network with DHCP, so the EZR23 sits behind a second NAT. The wizard's network list greyed out `flower` and would not select it; use **Manually** (SSID exactly as set, **WPA2-PSK**, key typed by hand). Do not join `YachtArion` (it would become a client of the boat router).
+- It broadcasts its own WiFi (`arion_2.4gflower`, channel 6, same as the Bullet). **Do not switch the 2.4G Wi-Fi OFF** (Wi-Fi Setup page): tested 2026-10-11, it kills the uplink to the Bullet (the 2.4 GHz radio is both its AP and its client link), so the boat falls back to 4G. Leave it ON; the "Hide Wi-Fi" toggle or a bland SSID is the most you can do, and since it shares channel 6 with the Bullet's link anyway the extra airtime cost is small.
+- Wired to the EZR23 **WAN** port. The EZR23's WAN (DHCP client) takes `192.168.10.100`.
 
-**Channel plan:** EZR23 `YachtArion` = channel 1; Bullet = channel 6 (or 11). Keep them non-overlapping.
+**EZR23 uplinks and failover (verified 2026-10-11, OpenWrt/LuCI "CellularRouter", mwan3)**
 
-**Next:** plug the Bullet into the flow router, join its SSID from a phone and confirm a `192.168.1.x` lease and internet; configure the Wavlink as a client of the Bullet at the desk; check the EZR23 WAN gets an address; only then move to the boat and check the real link over the mooring distance (omni may need replacing with a directional antenna if the link is marginal).
+| Priority | Interface | What | Metric |
+| :--- | :--- | :--- | :--- |
+| 1 | `wan` (`br-wan`) | Ethernet to the Wavlink, DHCP, `192.168.10.100` | 10 |
+| 2 | `wwan` | the old WiFi **client of `flow`** (`192.168.1.212`) | 20 |
+| 3 | `MOBILE` (`wwan0`) | 4G, SIM1, CGNAT `100.x` | 30 |
+
+- All three are in the `wan` firewall zone. mwan3 (Network -> MultiWAN Manager) pings each uplink every 5 s: `wan` goes down after 3 failures and up after 8 successes; `MOBILE` and `wwan` after 3 and 3. The metrics were already 10/20/30 (greyed defaults in Network -> Interfaces -> Edit -> Advanced "Use gateway metric"); the routing flipped to the Wavlink once they were saved.
+- How to see which uplink is in use from a node on `YachtArion`: `ping -c1 -t2 1.1.1.1`, the hop-2 address in the reply is `192.168.10.1` (Wavlink), `192.168.1.1` (old `flow` link) or a carrier address (4G). TTL to `1.1.1.1` is 55 via the Wavlink, 56 via `flow`, 51 via 4G. `curl -s https://ifconfig.me` shows the home address `14.1.75.247` for both shore routes and the carrier address for 4G.
+- **Tests done on the desk:** failover (Wavlink cable out: hub kept pinging within seconds via `flow`), fail-back (cable in: back on the Wavlink in under a minute, 0 % loss), and 4G alone (both others stopped: 0 % loss, about 54 ms, carrier address `1.145.245.212`, about 50 KB used). Not yet tested over the real mooring distance.
+- **The `flow` client is now disabled** (Network -> Wireless, entry kept, **Enable** button restores it), so the single radio serves `YachtArion` only and is no longer tied to `flow`'s channel. The radio was moved from channel 1 to **channel 11**. All three Pis rejoined (signals -22, -31, -34 dBm). If the shore link is ever lost for good, re-enable the `flow` client from the same page; 4G remains the last fallback.
+- The router config backup from 2026-10-11 is `/home/user/Downloads/backup-CellularRouter-2026-10-11.tar.gz` on the hub (contains WiFi keys: never commit it).
+- After the change my laptop reached the hub over Tailscale through the Wavlink's address (`192.168.1.77`), about 5 ms from the home wifi.
+
+**Channel plan:** `YachtArion` (EZR23) = channel 11; Bullet `flower` = 6; the Wavlink's own WiFi is also on 6 until turned off. Channels 1/6/11 do not overlap.
+
+**Next:** mount the Bullet and Wavlink and test the real link over the mooring distance (the omni may need replacing with a directional antenna if marginal); consider deleting the hub's `flow` NetworkManager profile.
 
 ## Power Distribution for Network Devices
 

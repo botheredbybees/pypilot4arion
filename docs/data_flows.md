@@ -251,7 +251,7 @@ Read `/var/log/arion/zero-mqtt-events.log` on the hub. `exceeded timeout` then `
 
 ## Open issues
 
-- **Hub WiFi association failures** (2026-10-09 and 2026-10-11): router side not yet investigated. Check the EZR23's WiFi channel (fix it, away from other networks), client limit and logs; see Pitfalls. Shore link (Bullet M2 + Wavlink) is being built and bench-tested: see [network_map.md](./network_map.md).
+- **Hub WiFi association failures** (2026-10-09 and 2026-10-11): router side investigated 2026-10-11: the EZR23's single radio was serving `YachtArion` and acting as a client of `flow` at the same time (so locked to `flow`'s channel 1, with a weak -74 dBm uplink). The `flow` client is now disabled and the radio is on channel 11, with the shore link via the Wavlink as the uplink (see network_map.md). Whether the hub's join failures are gone is **not yet confirmed**: watch over a few power-ups. Check the EZR23's WiFi channel (fix it, away from other networks), client limit and logs; see Pitfalls. Shore link (Bullet M2 + Wavlink) is being built and bench-tested: see [network_map.md](./network_map.md).
 - Steering node WiFi: ping varies from about 5 ms to 400 ms and dropped once. Fix before relying on it at sea.
 - Wind node reboots (about 16:32, 17:07, 18:20 on 2026-10-07), cause unknown.
 - Hub: one 4 s undervoltage event with the BME680 board disconnected; the board itself is still a suspect for the original boot loop.
