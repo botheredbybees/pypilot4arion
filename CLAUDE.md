@@ -27,6 +27,7 @@ This is a fork of the open-source [pypilot](https://github.com/pypilot/pypilot) 
 - **The hub has two accounts:** SSH/admin is `bbb` (the only one with Claude Code, `~/.local/bin/claude`); the desktop, OpenCPN and AvNav run as `user`, whose terminal on the hub's own screen is `user`. Signal K runs as `signalk`. Moving the desktop to `bbb` was considered and deliberately not done.
 - The hub has a `wifi-recovery` systemd timer (`scripts/hub/`, installed in `/usr/local/sbin` and `/etc/systemd/system`) that runs `nmcli con up YachtArion` if wlan0 has been down 3 minutes. Log: `journalctl -t wifi-recovery`.
 - Do not switch the operator's laptop to another WiFi network (e.g. `YachtArion`) without asking; use Tailscale to reach the hub.
+- Moving aboard: `docs/moving_aboard_todo.md` is the to-do list (power converters, optional Ethernet via a spare Linksys SD208, cold-boot soak, real-distance link test) and `docs/preflight_checklist.md` §2a has the network checks. The hub's `~/CLAUDE.md` is a separate, hub-only file; edit it there, not from the repo.
 - Remote access: Tailscale to the hub (`100.123.233.82`, Tailscale SSH needs a browser approval), then jump to `.100` / `.102`. See `docs/data_flows.md`.
 
 ## Build & Install
